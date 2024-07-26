@@ -1,0 +1,15 @@
+configuration {
+	modi: "drun";
+	show-icons: true;
+	drun-display-format: "{icon} {name}";
+	location: 0;
+	disable-history: false;
+	display-drun: "   Apps ";
+    font: "Fira Code 24";
+}
+
+@theme "Arc-Dark"
+
+element-icon {
+    size: 2ch;
+}
