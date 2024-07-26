@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Exit Hyprland
+Comment=Close the Hyprland session.
+GenericName=Logout
+Exec=
+Icon=system-log-out
+Type=Application
+Categories=System;
+Keywords=logout;
