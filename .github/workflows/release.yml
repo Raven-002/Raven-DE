@@ -1,0 +1,52 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  VERSION: $MAJOR.$MINOR.$PATCH
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Mandatory to use the extract version from tag action
+
+      - name: Extract version from tag
+        uses: damienaicheh/extract-version-from-tag-action@v1.3.0
+
+      # - name: Checkout code
+      #   uses: actions/checkout@v2
+
+      - name: Setup PKGBUILD file
+        run: |
+          sed "s/@PKGVER@/${{ env.VERSION }}/" PKGBUILD.in > PKGBUILD
+
+      - name: Makepkg Build and Check
+        id: makepkg
+        uses: edlanglois/pkgbuild-action@v1
+
+      - name: Print Package Files
+        run: |
+          echo "Successfully created the following package archive"
+          echo "Package: ${{ steps.makepkg.outputs.pkgfile0 }}"
+
+      - name: Upload Package Archive
+        uses: actions/upload-artifact@v2
+        with:
+          path: ${{ steps.makepkg.outputs.pkgfile0 }}
+          name: ${{ steps.makepkg.outputs.pkgfile0 }}
+
+      - name: Create a Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: ${{ steps.makepkg.outputs.pkgfile0 }}
