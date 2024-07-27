@@ -18,7 +18,7 @@ function source_if_exists()
 
 
 # *** Settings ************************************************
-export ZSH="$HOME/.config/zsh/oh-my-zsh"
+export ZSH="$HOME/.local/share/oh-my-zsh"
 export ZSH_COMPDUMP=$ZSH/cache/.zcompdump-$HOST
 source_if_exists "$HOME/.config/zsh/aliases"
 source_if_exists "$HOME/.config/zsh/env"
@@ -44,4 +44,3 @@ if [ `tput colors` != "256" ] || [[ $FORCE_SIMPLE_ZSH == "1" ]]; then
 else
     source "$HOME/.config/zsh/advanced-zsh-theme.zsh"
 fi
-

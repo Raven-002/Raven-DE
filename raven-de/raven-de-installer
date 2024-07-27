@@ -3,8 +3,8 @@
 set -e
 
 # *** Globals ********************************************
-local _scripts_command=$(readlink -f "$0")
-INSTALLER_DIR="${_scripts_command:a:h}"
+SCRIPTS_COMMAND=$(readlink -f "$0")
+INSTALLER_DIR="${SCRIPTS_COMMAND:a:h}"
 PROJECT_ROOT="$INSTALLER_DIR/.."
 INSTALLER_SRC_CONFIG_DIR="$INSTALLER_DIR/config-files"
 
@@ -175,7 +175,7 @@ function create_link() {
     if [ -z "$DRYRUN" ]; then
         assert_dir "$(dirname "$dst")"
     fi
-    do_operation ln -srT "$src" "$dst"
+    do_operation ln -sfrT "$src" "$dst"
 }
 
 function create_link_in_folder() {
@@ -205,12 +205,14 @@ function configure_gtk_breeze_dark() {
     link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/gtk/gtk-4.0"
     link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/gtk/gtkrc"
     link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/gtk/gtkrc-2.0"
+    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/xsettingsd"
 }
 
 function configure_qt_breeze_dark() {
     link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/qt/kdeglobals"
     link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/qt/qt5ct"
     link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/qt/qt6ct"
+    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/xsettingsd"
 }
 
 function install_breeze_dracula_cursor() {
@@ -276,14 +278,14 @@ function configure_rofi() {
 
 function configure_zsh() {
     link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/zsh"
-    export ZSH="$USER_CONFIG_DIR/zsh/oh-my-zsh"
+    export ZSH="$USER_HOME_DIR/.local/share/oh-my-zsh"
 
     if ! [ -e "$ZSH" ]; then
         do_operation sh -c "$(wget -O- https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
     fi
 
-    if ! [ -d "$USER_CONFIG_DIR/zsh/oh-my-zsh/custom/themes/powerlevel10k" ]; then
-        do_operation git clone --depth=1 https://github.com/romkatv/powerlevel10k.git $USER_CONFIG_DIR/zsh/oh-my-zsh/custom/themes/powerlevel10k
+    if ! [ -d "$ZSH/custom/themes/powerlevel10k" ]; then
+        do_operation git clone --depth=1 https://github.com/romkatv/powerlevel10k.git $ZSH/custom/themes/powerlevel10k
     fi
 
     create_link "$USER_CONFIG_DIR/zsh/zshrc" "$USER_HOME_DIR/.zshrc"
@@ -357,6 +359,7 @@ function parse_args() {
 }
 
 function user_config() {
+    do_operation cd $USER_HOME_DIR
     yes_no_prompt "Create user directories?" && create_user_directories
     yes_no_prompt "Configure gtk breeze dark?" && configure_gtk_breeze_dark
     yes_no_prompt "Configure qt breeze dark?" && configure_qt_breeze_dark
@@ -392,7 +395,7 @@ function add_user() {
     fi
     do_operation useradd --create-home --shell "/bin/zsh" $groups_flag "$username"
     yes_no_prompt "SetPassword?" && do_operation passwd "$username"
-    yes_no_prompt "Configure User?" && sudo -u "$username" "$0" -m user-config
+    yes_no_prompt "Configure User?" && do_operation sudo -Hu "$username" "$SCRIPTS_COMMAND" -m user-config
 }
 
 function main() {

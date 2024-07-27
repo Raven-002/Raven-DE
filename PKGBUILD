@@ -153,20 +153,15 @@ package() {
     mkdir -p \
         $pkgdir/usr/bin \
         $pkgdir/usr/share/raven-de \
-        $pkgdir/usr/share/application \
-        $pkgdir/etc/xdg
+        $pkgdir/usr/share/application
 
     # Copy folders
     cp --recursive --no-dereference --no-target-directory $srcdir/$pkgname-$pkgver/raven-de $pkgdir/usr/share/raven-de
     cp --recursive --no-dereference --no-target-directory $srcdir/$pkgname-$pkgver/applications $pkgdir/usr/share/applications
+    rm -rf $pkgdir/usr/share/raven-de/config-files/zsh/oh-my-zsh
     
     # Symlink scripts
     ln -srT $pkgdir/usr/share/raven-de/raven-de-installer $pkgdir/usr/bin/raven-de-installer
-    ln -sr $pkgdir/usr/share/raven-de/config-files/gtk/* $pkgdir/etc/xdg/
-    ln -sr $pkgdir/usr/share/raven-de/config-files/qt/* $pkgdir/etc/xdg/
-    ln -sr $pkgdir/usr/share/raven-de/config-files/kitty $pkgdir/etc/xdg/
-    ln -sr $pkgdir/usr/share/raven-de/config-files/rofi $pkgdir/etc/xdg/
-    ln -sr $pkgdir/usr/share/raven-de/config-files/xsettingsd $pkgdir/etc/xdg/
 }
 
 post_install() {
