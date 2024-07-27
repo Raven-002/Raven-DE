@@ -55,7 +55,13 @@ depends=(
     flatpak
 
     # Fonts
-    nerd-fonts
+    ttf-firacode-nerd
+    ttf-iosevka-nerd
+    ttf-noto-nerd
+    ttf-nerd-fonts-symbols
+    ttf-nerd-fonts-symbols-common
+    ttf-nerd-fonts-symbols-mono
+
     noto-fonts
     ttf-dejavu
 
@@ -125,7 +131,7 @@ optdepends=(
     nvidia
     nvidia-utils
     nvidia-prime
-)
+    )
 provides=('raven-de')
 conflicts=('raven-de')
 replaces=()
@@ -138,17 +144,22 @@ noextract=()
 sha256sums=()
 validpgpkeys=()
 
+prepare() {
+	ln -snfT "$startdir" "$srcdir/$pkgname-$pkgver"
+}
+
 package() {
     # Make directories
     mkdir -p \
         $pkgdir/usr/bin \
-        $pkgdir/usr/share/rave-de \
+        $pkgdir/usr/share/raven-de \
         $pkgdir/usr/share/applications
 
     # Copy folders
-    cp --recursive --no-dereference --no-target-directory raven-de $pkgdir/usr/share/raven-de
-    cp --recursive --no-dereference --no-target-directory applications $pkgdir/usr/share/applications
+    pwd
+    cp --recursive --no-dereference --no-target-directory $srcdir/$pkgname-$pkgver/raven-de $pkgdir/usr/share/raven-de
+    cp --recursive --no-dereference --no-target-directory $srcdir/$pkgname-$pkgver/applications $pkgdir/usr/share/applications
     
     # Symlink scripts
-    ln -srT $pkgdir/usr/share/raven-de/raven-de-installer $pkgdhir/usr/bin/raven-de-installer
+    ln -srT $pkgdir/usr/share/raven-de/raven-de-installer $pkgdir/usr/bin/raven-de-installer
 }
