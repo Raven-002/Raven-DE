@@ -157,7 +157,6 @@ package() {
         $pkgdir/etc/xdg
 
     # Copy folders
-    pwd
     cp --recursive --no-dereference --no-target-directory $srcdir/$pkgname-$pkgver/raven-de $pkgdir/usr/share/raven-de
     cp --recursive --no-dereference --no-target-directory $srcdir/$pkgname-$pkgver/applications $pkgdir/usr/share/applications
     
@@ -167,10 +166,9 @@ package() {
     ln -sr $pkgdir/usr/share/raven-de/config-files/qt/* $pkgdir/etc/xdg/
     ln -sr $pkgdir/usr/share/raven-de/config-files/kitty $pkgdir/etc/xdg/
     ln -sr $pkgdir/usr/share/raven-de/config-files/rofi $pkgdir/etc/xdg/
-    ln -sr $pkgdir/usr/share/raven-de/config-files/waybar $pkgdir/etc/xdg/
-    ln -sr $pkgdir/usr/share/raven-de/config-files/hypr $pkgdir/etc/xdg/
-    mkdir -p $pkgdir/etc/xfg/hypr-user/
-    touch $pkgdir/etc/xfg/hypr-user/hyprland-user-programs.conf
-    touch $pkgdir/etc/xfg/hypr-user/hyprland-user-config.conf
-    ln -sr $pkgdir/usr/share/raven-de/config-files/ $pkgdir/etc/xdg/
+    ln -sr $pkgdir/usr/share/raven-de/config-files/xsettingsd $pkgdir/etc/xdg/
+}
+
+post_install() {
+    echo "Configs are saved in /usr/share/raven-de"
 }
