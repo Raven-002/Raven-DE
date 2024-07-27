@@ -262,6 +262,10 @@ function configure_hypr() {
     do_operation touch $USER_CONFIG_DIR/hypr-user/hyprland-user-config.conf
 }
 
+function configure_waybar() {
+    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/waybar"
+}
+
 function configure_kitty() {
     link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/kitty"
 }
@@ -282,7 +286,7 @@ function configure_zsh() {
         do_operation git clone --depth=1 https://github.com/romkatv/powerlevel10k.git $USER_CONFIG_DIR/zsh/oh-my-zsh/custom/themes/powerlevel10k
     fi
 
-    create_link_in_folder "$USER_CONFIG_DIR/zsh/zshrc" "$USER_HOME_DIR"
+    create_link "$USER_CONFIG_DIR/zsh/zshrc" "$USER_HOME_DIR/.zshrc"
 }
 
 function configure_neovim() {
@@ -360,6 +364,7 @@ function user_config() {
     yes_no_prompt "Configure flatpak breeze dark?" && configure_flatpak_breeze_dark
     yes_no_prompt "Configure flatpak electron?" && configure_flatpak_electron
     yes_no_prompt "Configure hypr?" && configure_hypr
+    yes_no_prompt "Configure waybar?" && configure_waybar
     yes_no_prompt "Configure kitty?" && configure_kitty
     yes_no_prompt "Configure rofi?" && configure_rofi
     yes_no_prompt "Configure zsh?" && configure_zsh
@@ -387,6 +392,7 @@ function add_user() {
     fi
     do_operation useradd --create-home --shell "/bin/zsh" $groups_flag "$username"
     yes_no_prompt "SetPassword?" && do_operation passwd "$username"
+    yes_no_prompt "Configure User?" && sudo -u "$username" "$0" -m user-config
 }
 
 function main() {
