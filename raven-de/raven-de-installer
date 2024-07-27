@@ -309,10 +309,10 @@ function install_yay() {
 function parse_args() {
     local app_name="rave-de-installer"
     local flag_help flag_verbose flag_dryrun
-    local arg_filename=(myfile) # set a default
+    local arg_mode=(user-config) # set a default
     local usage=(
         "$app_name [-h|--help]"
-        "$app_name [-v|--verbose] [-d|--dryrun]"
+        "$app_name [-v|--verbose] [-d|--dryrun] [-m|--mode <user-config|user-uninstaller|add-user>]"
     )
 
     # -D pulls parsed flags out of $@
@@ -325,7 +325,8 @@ function parse_args() {
     if ! zparseopts -D -F -K -- \
         {h,-help}=flag_help \
         {v,-verbose}=flag_verbose \
-        {d,-dryrun}=flag_dryrun; then
+        {d,-dryrun}=flag_dryrun \
+        {m,-mode}:=arg_mode; then
         print -l $usage
         return $EXIT_STATUS_FAILURE
     fi
@@ -345,11 +346,10 @@ function parse_args() {
         print -l $usage
         return $EXIT_STATUS_FAILURE
     fi
+    export SCRIPT_MODE="${(q+)arg_mode[-1]}"
 }
 
-function main() {
-    assert_exists $INSTALLER_SRC_CONFIG_DIR
-    parse_args "$@"
+function user_config() {
     yes_no_prompt "Create user directories?" && create_user_directories
     yes_no_prompt "Configure gtk breeze dark?" && configure_gtk_breeze_dark
     yes_no_prompt "Configure qt breeze dark?" && configure_qt_breeze_dark
@@ -362,6 +362,20 @@ function main() {
     yes_no_prompt "Configure zsh?" && configure_zsh
     yes_no_prompt "Configure neovim?" && configure_neovim
     yes_no_prompt "Install yay?" && install_yay
+}
+
+function main() {
+    assert_exists $INSTALLER_SRC_CONFIG_DIR
+    parse_args "$@"
+    assert_not_empty "$SCRIPT_MODE"
+    case "$SCRIPT_MODE" in
+        'user-config')
+        user_config
+        ;;
+        *)
+        print_error "Invalid mode '$SCRIPT_MODE'"
+        ;;
+    esac
 }
 
 main "$@"
