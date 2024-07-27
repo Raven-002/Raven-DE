@@ -257,6 +257,9 @@ function configure_flatpak_electron() {
 function configure_hypr() {
     link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/hypr"
     create_link_in_folder "$INSTALLER_SRC_CONFIG_DIR/hypr/hyprland-portals.conf" "$USER_CONFIG_DIR/xdg-desktop-portal"
+    do_operation mkdir -p $USER_CONFIG_DIR/hypr-user/
+    do_operation touch $USER_CONFIG_DIR/hypr-user/hyprland-user-programs.conf
+    do_operation touch $USER_CONFIG_DIR/hypr-user/hyprland-user-config.conf
 }
 
 function configure_kitty() {

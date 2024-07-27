@@ -153,7 +153,8 @@ package() {
     mkdir -p \
         $pkgdir/usr/bin \
         $pkgdir/usr/share/raven-de \
-        $pkgdir/usr/share/applications
+        $pkgdir/usr/share/application \
+        $pkgdir/etc/xdg
 
     # Copy folders
     pwd
@@ -162,4 +163,14 @@ package() {
     
     # Symlink scripts
     ln -srT $pkgdir/usr/share/raven-de/raven-de-installer $pkgdir/usr/bin/raven-de-installer
+    ln -sr $pkgdir/usr/share/raven-de/config-files/gtk/* $pkgdir/etc/xdg/
+    ln -sr $pkgdir/usr/share/raven-de/config-files/qt/* $pkgdir/etc/xdg/
+    ln -sr $pkgdir/usr/share/raven-de/config-files/kitty $pkgdir/etc/xdg/
+    ln -sr $pkgdir/usr/share/raven-de/config-files/rofi $pkgdir/etc/xdg/
+    ln -sr $pkgdir/usr/share/raven-de/config-files/waybar $pkgdir/etc/xdg/
+    ln -sr $pkgdir/usr/share/raven-de/config-files/hypr $pkgdir/etc/xdg/
+    mkdir -p $pkgdir/etc/xfg/hypr-user/
+    touch $pkgdir/etc/xfg/hypr-user/hyprland-user-programs.conf
+    touch $pkgdir/etc/xfg/hypr-user/hyprland-user-config.conf
+    ln -sr $pkgdir/usr/share/raven-de/config-files/ $pkgdir/etc/xdg/
 }
