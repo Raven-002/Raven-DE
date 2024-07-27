@@ -1,0 +1,46 @@
+# *** Functions ***********************************************
+function add_to_path()
+{
+    [ -d "$1" ] || echo "Invalid path: '$1'" && return
+
+    if [ -z "`echo ${PATH} | grep '$1'`" ]; then
+        export PATH="$1:${PATH}"
+    fi
+}
+
+
+function source_if_exists()
+{
+    if [ -f "$1" ]; then
+        source "$1"
+    fi
+}
+
+
+# *** Settings ************************************************
+export ZSH="$HOME/.local/share/oh-my-zsh"
+export ZSH_COMPDUMP=$ZSH/cache/.zcompdump-$HOST
+source_if_exists "$HOME/.config/zsh/aliases"
+source_if_exists "$HOME/.config/zsh/env"
+source_if_exists "$HOME/.aliases"
+source_if_exists "$HOME/.env"
+
+
+# *** Main ****************************************************
+# Hooks for manually starting display servers.
+# Note: the tty hook usually start a graphicl session and then exists.
+if [[ -z $DISPLAY ]]; then
+    if [[ $(tty) = /dev/tty1 ]]; then source_if_exists "$HOME/.config/zsh/tty1-hook.zsh"
+    elif [[ $(tty) = /dev/tty2 ]]; then source_if_exists "$HOME/.config/zsh/tty2-hook.zsh"
+    elif [[ $(tty) = /dev/tty3 ]]; then source_if_exists "$HOME/.config/zsh/tty3-hook.zsh"
+    elif [[ $(tty) = /dev/tty4 ]]; then source_if_exists "$HOME/.config/zsh/tty4-hook.zsh"
+    elif [[ $(tty) = /dev/tty5 ]]; then source_if_exists "$HOME/.config/zsh/tty5-hook.zsh"
+    fi
+fi
+
+# Choose zshrc config based on terminal properties
+if [ `tput colors` != "256" ] || [[ $FORCE_SIMPLE_ZSH == "1" ]]; then
+    source "$HOME/.config/zsh/simple-zsh-theme.zsh"
+else
+    source "$HOME/.config/zsh/advanced-zsh-theme.zsh"
+fi

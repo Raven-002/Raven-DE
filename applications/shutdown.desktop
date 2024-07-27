@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=shutdown
+Comment=Shutdown the machine.
+GenericName=Shutdown
+Exec=shutdown 0
+Icon=system-shutdown
+Type=Application
+Categories=System;
+Keywords=shutdown;

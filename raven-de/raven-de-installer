@@ -1,0 +1,471 @@
+#!/bin/zsh
+
+set -e
+
+# *** Globals ********************************************
+SCRIPTS_COMMAND=$(readlink -f "$0")
+INSTALLER_DIR="${SCRIPTS_COMMAND:a:h}"
+PROJECT_ROOT="$INSTALLER_DIR/.."
+INSTALLER_SRC_CONFIG_DIR="$INSTALLER_DIR/config-files"
+
+EXIT_STATUS_SUCCESS=0
+EXIT_STATUS_FAILURE=1
+DEV_NULL='/dev/null'
+
+USER_CONFIG_DIR="$HOME/.config"
+GLOBAL_CONFIG_DIR="/etc/xdg"
+USER_HOME_DIR="$HOME"
+
+# *** Utils Functions ************************************
+function read_prompt() { # $1 is a prompt to print
+    local answer
+    printf "\e[1;34mINPUT: \e[0m$1: \e[0;32m"
+    read answer
+    printf "\e[0m"
+    export _prompt_result=$answer
+}
+
+function yes_no_prompt() { # $1 is a prompt to print
+    local answer
+    printf "\e[1;34mINPUT: \e[0m$1[\e[0;32my\e[0m/\e[1;31mN\e[0m]: \e[0;32m"
+    read answer
+    printf "\e[0m"
+    if [[ $answer == 'y' || $answer == 'Y' || $answer == 'yes' || $answer == 'YES' || $answer == 'Yes' ]]; then
+        return $EXIT_STATUS_SUCCESS
+    else
+        return $EXIT_STATUS_FAILURE
+    fi
+}
+
+function silent_call() { # Call to args with fd 1 and 2 redirected to dev-null
+    ${@:1} 1>$DEV_NULL 2>&1
+}
+
+function do_operation() {
+    assert_not_empty "$1"
+
+    if ! [ -z "$DRYRUN" ]; then
+        print_info "\e[1;32mDry-run:\e[0;37m $@\e[0m"
+        return $EXIT_STATUS_SUCCESS
+    fi
+
+    if ! [ -z "$VERBOSE" ]; then
+        print_info "\e[1;32mRunning:\e[0;37m $@\e[0m"
+        return $EXIT_STATUS_SUCCESS
+    fi
+
+    "${@}"
+}
+
+function print_error() { # Print error to stderr
+    ERROR_MSG="${@:1}"
+    printf "\e[1;31mERROR(pid: $$):\e[0m $ERROR_MSG\n" >&2
+}
+
+function print_warning() { # Print warrning to stderr
+    WARN_MSG="${@:1}"
+    printf "\e[1;33mWARN(pid: $$):\e[0m $WARN_MSG\n" >&2
+}
+
+function print_info() { # Print info to stderr
+    INFO_MSG="${@:1}"
+    printf "\e[1;35mINFO(pid: $$):\e[0m $INFO_MSG\n" >&2
+}
+
+function print_note() { # Print info to stderr
+    NOTE_MSG="${@:1}"
+    printf "\e[1;35mNOTE:\e[0;35m $NOTE_MSG\n\e[0m"
+}
+
+function print_seperator() { # Print info to stderr
+    SEPERATOR_MSG="${@:1}"
+    printf "\n"
+    printf "\e[0;35m>------>\n"
+    printf "\e[0;36m  >------> \e[1;34m$SEPERATOR_MSG\n"
+    printf "\e[0;35m>------>\n"
+    printf "\n\e[0m"
+}
+
+function print_done() {
+    printf "\e[1;32mDone\e[0m ${@:1}\n\n\n"
+}
+
+function is_root() {
+    if [[ $(whoami) == 'root' ]]; then
+        return $EXIT_STATUS_SUCCESS
+    fi
+    return $EXIT_STATUS_FAILURE
+}
+
+function assert_is_root() {
+    if ! is_root; then
+        print_error "Root is required!"
+        exit $EXIT_STATUS_FAILURE
+    fi
+}
+
+function assert_not_root() {
+    if is_root; then
+        print_error "Do not run as root!"
+        exit $EXIT_STATUS_FAILURE
+    fi
+}
+
+function assert_not_empty() {
+    if [ -z "$1" ]; then
+        print_error "Got empty parameter!"
+        exit $EXIT_STATUS_FAILURE
+    fi
+}
+
+function assert_exists() {
+    assert_not_empty "$1"
+    if ! [ -e "$1" ]; then
+        print_error "'$1' does not exists!"
+        exit $EXIT_STATUS_FAILURE
+    fi
+}
+
+function assert_dir() {
+    assert_not_empty "$1"
+    assert_exists "$1"
+    if ! [ -d "$1" ]; then
+        print_error "'$1' is not a directory!"
+        exit $EXIT_STATUS_FAILURE
+    fi
+}
+
+function assert_not_exists() {
+    assert_not_empty "$1"
+    if [ -e "$1" ]; then
+        print_error "'$1' already exists!"
+        exit $EXIT_STATUS_FAILURE
+    fi
+}
+
+function create_backup() {
+    file="$1"
+    new_file_name="$file-$(date +%Y-%m-%d_%H-%M-%S)"
+
+    assert_not_empty "$file"
+
+    if ! [ -e "$file" ]; then
+        return $EXIT_STATUS_SUCCESS
+    fi
+
+    assert_not_exists "$new_file_name"
+
+    do_operation mv -T "$file" "$new_file_name"
+}
+
+function create_link() {
+    src="${1}"
+    dst="${2}"
+
+    assert_exists "$src"
+    assert_not_empty "$dst"
+
+    if [[ -e "$dst" && ! -L "$dst" ]]; then
+        create_backup "$dst"
+    fi
+
+    if ! [ -d "$(dirname "$dst")" ]; then
+        do_operation mkdir -p "$(dirname "$dst")"
+    fi
+    if [ -z "$DRYRUN" ]; then
+        assert_dir "$(dirname "$dst")"
+    fi
+    do_operation ln -sfrT "$src" "$dst"
+}
+
+function create_link_in_folder() {
+    src="${1}"
+    dst="${2}"
+
+    assert_exists "$src"
+    assert_not_empty "$dst"
+
+    create_link "$src" "$dst/$(basename $src)"
+}
+
+function link_to_user_config() {
+    src="${1}"
+    assert_exists "$src"
+
+    create_link_in_folder "$src" "$USER_CONFIG_DIR"
+}
+
+# *** Functions ******************************************
+function create_user_directories() {
+    do_operation xdg-user-dirs-update
+}
+
+function configure_gtk_breeze_dark() {
+    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/gtk/gtk-3.0"
+    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/gtk/gtk-4.0"
+    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/gtk/gtkrc"
+    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/gtk/gtkrc-2.0"
+    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/xsettingsd"
+}
+
+function configure_qt_breeze_dark() {
+    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/qt/kdeglobals"
+    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/qt/qt5ct"
+    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/qt/qt6ct"
+    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/xsettingsd"
+}
+
+function install_breeze_dracula_cursor() {
+    _TMP_THEME_DIR="/tmp/dracula-cursor-build.tmp"
+    do_operation mkdir -p "$USER_HOME_DIR/.local/share/icons"
+    do_operation mkdir "$_TMP_THEME_DIR"
+
+    do_operation git clone https://github.com/dracula/gtk.git "$_TMP_THEME_DIR/dracula-gtk"
+    do_operation rm -rf "$USER_HOME_DIR/.local/share/icons/Breeze-Dracula"
+    do_operation cp -r "$_TMP_THEME_DIR/dracula-gtk/kde/cursors/Dracula-cursors" "$USER_HOME_DIR/.local/share/icons/Breeze-Dracula"
+
+    do_operation git clone https://github.com/guillaumeboehm/hyprcursor_dracula_kde.git "$_TMP_THEME_DIR/hyprcursor_dracula_kde"
+    do_operation hyprcursor-util --create "$_TMP_THEME_DIR/hyprcursor_dracula_kde" -o "$USER_HOME_DIR/.local/share/icons"
+
+    do_operation rm -rf "$_TMP_THEME_DIR"
+}
+
+function configure_flatpak_breeze_dark() {
+    do_operation flatpak override --user --filesystem=xdg-config/gtk-4.0:ro
+    do_operation flatpak override --user --filesystem=xdg-config/gtk-3.0:ro
+    do_operation flatpak override --user --filesystem=xdg-config/gtk-2.0:ro
+    do_operation flatpak override --user --filesystem=xdg-config/gtkrc-2.0:ro
+    do_operation flatpak override --user --filesystem=xdg-config/gtkrc:ro
+
+    do_operation flatpak override --user --filesystem=xdg-config/qt6ct:ro
+    do_operation flatpak override --user --filesystem=xdg-config/qt5ct:ro
+
+    # for gtk4 mostly
+    do_operation mkdir -p "$USER_HOME_DIR/.themes"
+    do_operation cp -r "/usr/share/themes/Breeze-Dark" "$USER_HOME_DIR/.themes"
+    do_operation flatpak override --user --filesystem=~/.themes:ro
+
+    do_operation flatpak override --user --env=GTK_THEME=Breeze-Dark
+    do_operation flatpak override --user --env=QT_QPA_PLATFORMTHEME=qt6ct
+    do_operation flatpak override --user --env=QT_QPA_PLATFORM=wayland
+    do_operation flatpak override --user --env=QT_STYLE_OVERRIDE=breeze
+}
+
+function configure_flatpak_electron() {
+    do_operation flatpak override --user --env=ELECTRON_OZONE_PLATFORM_HINT=auto
+    do_operation flatpak override --user --socket=wayland
+}
+
+function configure_hypr() {
+    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/hypr"
+    create_link_in_folder "$INSTALLER_SRC_CONFIG_DIR/hypr/hyprland-portals.conf" "$USER_CONFIG_DIR/xdg-desktop-portal"
+    do_operation mkdir -p $USER_CONFIG_DIR/hypr-user/
+    do_operation touch $USER_CONFIG_DIR/hypr-user/hyprland-user-programs.conf
+    do_operation touch $USER_CONFIG_DIR/hypr-user/hyprland-user-config.conf
+}
+
+function configure_waybar() {
+    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/waybar"
+}
+
+function configure_kitty() {
+    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/kitty"
+}
+
+function configure_rofi() {
+    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/rofi"
+}
+
+function configure_zsh() {
+    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/zsh"
+    export ZSH="$USER_HOME_DIR/.local/share/oh-my-zsh"
+
+    if ! [ -e "$ZSH" ]; then
+        do_operation sh -c "$(wget -O- https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+    fi
+
+    if ! [ -d "$ZSH/custom/themes/powerlevel10k" ]; then
+        do_operation git clone --depth=1 https://github.com/romkatv/powerlevel10k.git $ZSH/custom/themes/powerlevel10k
+    fi
+
+    create_link "$USER_CONFIG_DIR/zsh/zshrc" "$USER_HOME_DIR/.zshrc"
+}
+
+function configure_neovim() {
+    do_operation git clone https://github.com/Raven-002/nvim.git "$USER_CONFIG_DIR/raven-de-nvim"
+    create_link "$USER_CONFIG_DIR/raven-de-nvim" "$USER_CONFIG_DIR/nvim"
+}
+
+function install_yay() {
+    assert_not_root
+
+    do_operation mkdir /tmp/yay-install-dir
+    do_operation pushd /tmp/yay-install-dir
+
+    do_operation sudo pacman --color=always -S --needed base-devel git
+    do_operation git clone https://aur.archlinux.org/yay.git
+    do_operation cd yay
+    do_operation makepkg -si
+
+    do_operation popd
+
+    do_operation yay -S yay
+    do_operation yay --version
+    do_operation rm -rf /tmp/yay-install-dir
+}
+
+function install_recommended_aur() {
+    yes_no_prompt "Install visual-studio-code?" && yay -S visual-studio-code-bin
+}
+
+function install_recommended_flatpaks() {
+    yes_no_prompt "Install Flatseal(flatpak permissions manager)?" && flatpak install com.github.tchx84.Flatseal
+    yes_no_prompt "Install Google Chrome?" && flatpak install com.google.Chrome
+    yes_no_prompt "Install MissionCenter(task manager)?" && flatpak install io.missioncenter.MissionCenter
+    yes_no_prompt "Install Nautilus(file manager)?" && flatpak install org.gnome.Nautilus
+    yes_no_prompt "Install Remmina(rdp client)?" && flatpak install org.remmina.Remmina
+}
+
+# *** Main ***********************************************
+function parse_args() {
+    local app_name="rave-de-installer"
+    local flag_help flag_verbose flag_dryrun
+    local arg_mode=(user-config) # set a default
+    local usage=(
+        "$app_name [-h|--help]"
+        "$app_name [-v|--verbose] [-d|--dryrun] [-m|--mode <mode>]"
+        "available modes:"
+        "\tuser-config          - Configure user dotfiles."
+        "\tadd-user             - Add a user."
+        "\tadmin-config         - Change system settings."
+    )
+
+    # -D pulls parsed flags out of $@
+    # -E allows flags/args and positionals to be mixed, which we don't want in this example
+    # -F says fail if we find a flag that wasn't defined
+    # -M allows us to map option aliases (ie: h=flag_help -help=h)
+    # -K allows us to set default values without zparseopts overwriting them
+    # Remember that the first dash is automatically handled, so long options are -opt, not --opt
+    zmodload zsh/zutil
+    if ! zparseopts -D -F -K -- \
+        {h,-help}=flag_help \
+        {v,-verbose}=flag_verbose \
+        {d,-dryrun}=flag_dryrun \
+        {m,-mode}:=arg_mode; then
+        print -l $usage
+        return $EXIT_STATUS_FAILURE
+    fi
+
+    if ! [ -z "$flag_help" ]; then
+        print -l $usage
+        exit $EXIT_STATUS_SUCCESS
+    fi
+    if (($#flag_verbose)); then
+        export VERBOSE=1
+    fi
+    if (($#flag_dryrun)); then
+        export DRYRUN=1
+    fi
+    if ! [ -z "$@" ]; then
+        print_error "Positional arguments are not allowed"
+        print -l $usage
+        return $EXIT_STATUS_FAILURE
+    fi
+    export SCRIPT_MODE="${arg_mode[-1]}"
+}
+
+function user_config() {
+    do_operation cd $USER_HOME_DIR
+    yes_no_prompt "Create user directories?" && create_user_directories
+    if yes_no_prompt "Apply breeze dark?"; then
+        yes_no_prompt "Configure gtk breeze dark?" && configure_gtk_breeze_dark
+        yes_no_prompt "Configure qt breeze dark?" && configure_qt_breeze_dark
+        yes_no_prompt "Install breeze dracula cursor?" && install_breeze_dracula_cursor
+        yes_no_prompt "Configure flatpak breeze dark?" && configure_flatpak_breeze_dark
+        yes_no_prompt "Configure flatpak electron?" && configure_flatpak_electron
+    fi
+    if yes_no_prompt "setup window manager?"; then
+        yes_no_prompt "Configure hypr?" && configure_hypr
+        yes_no_prompt "Configure waybar?" && configure_waybar
+        yes_no_prompt "Configure kitty?" && configure_kitty
+        yes_no_prompt "Configure rofi?" && configure_rofi
+    fi
+    yes_no_prompt "Configure zsh?" && configure_zsh
+    yes_no_prompt "Configure neovim?" && configure_neovim
+    yay --version >/dev/null || yes_no_prompt "Install yay?" && install_yay
+    yay --version >/dev/null && yes_no_prompt "Install recommended aur apps?" && install_recommended_aur
+    yes_no_prompt "Install recommended flatpaks?" && install_recommended_flatpaks
+}
+
+function user_uninstall() {
+    print_error "Not Implemented"
+    return $EXIT_STATUS_FAILURE
+}
+
+function add_user() {
+    assert_is_root
+    read_prompt "UserName[Empty to cancel]"
+    local username=$_prompt_result
+    if [ -z "$username" ]; then
+        return $EXIT_STATUS_SUCCESS
+    fi
+    local user_goups=""
+    yes_no_prompt "Add Wheel group(for sudo)?" && user_goups+=" wheel"
+    local groups_flag=""
+    if ! [ -z "$user_goups" ]; then
+        groups_flag="--groups$user_goups"
+    fi
+    do_operation useradd --create-home --shell "/bin/zsh" $groups_flag "$username"
+    yes_no_prompt "SetPassword?" && do_operation passwd "$username"
+    yes_no_prompt "Configure User?" && do_operation sudo -Hu "$username" "$SCRIPTS_COMMAND" -m user-config
+}
+
+function admin_config() {
+    assert_is_root
+
+    if yes_no_prompt "Enable basic services?"; then
+        do_operation systemctl enable bluetooth.service || true
+        do_operation systemctl enable NetworkManager.service || true
+        do_operation systemctl enable sshd.service || true
+        do_operation systemctl enable sddm.service || true
+    fi
+
+    if yes_no_prompt "Start basic services?"; then
+        do_operation systemctl start bluetooth.service || true
+        do_operation systemctl start NetworkManager.service || true
+        do_operation systemctl start sshd.service || true
+    fi
+
+    if yes_no_prompt "Configure sudo for wheel group?"; then
+        if yes_no_prompt "Should wheel users enter a password when using sudo?"; then
+            do_operation sed -i 's/# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' "/etc/sudoers"
+        else
+            do_operation sed -i 's/# %wheel ALL=(ALL:ALL) NOPASSWD: ALL/%wheel ALL=(ALL:ALL) NOPASSWD :ALL/' "/etc/sudoers"
+        fi
+    fi
+}
+
+function main() {
+    assert_exists $INSTALLER_SRC_CONFIG_DIR
+    parse_args "$@"
+    assert_not_empty "$SCRIPT_MODE"
+    case "$SCRIPT_MODE" in
+    'user-config')
+        user_config
+        ;;
+    'user-uninstall')
+        user_uninstall
+        ;;
+    'add-user')
+        add_user
+        ;;
+    'admin-config')
+        admin_config
+        ;;
+    *)
+        print_error "Invalid mode '$SCRIPT_MODE'"
+        ;;
+    esac
+}
+
+main "$@"

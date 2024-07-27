@@ -1,0 +1,27 @@
+# sudo aliases
+alias sudo='sudo '
+alias __='sudo -E '
+
+# Vim like keys
+alias :q='exit'
+alias :wq='exit'
+alias :q!='exit'
+alias :wq!='exit'
+alias :x='exit'
+alias :x!='exit'
+alias :Q='exit'
+alias :WQ='exit'
+alias :Wq='exit'
+alias :Q!='exit'
+alias :WQ!='exit'
+alias :Wq!='exit'
+alias :X='exit'
+alias :X!='exit'
+alias :e='nvim '
+
+# pacman aliases
+alias pacman='pacman --color=always '
+alias yay='yay --color=always '
+
+# Shortcuts
+alias cl=clear

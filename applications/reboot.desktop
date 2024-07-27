@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=reboot
+Comment=Reboot the machine.
+GenericName=Reboot
+Exec=reboot
+Icon=system-reboot
+Type=Application
+Categories=System;
+Keywords=reboot;restart;

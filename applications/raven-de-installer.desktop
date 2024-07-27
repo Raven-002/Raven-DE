@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Raven-DE Installer
+Comment=Open the raven-de user setup tool.
+GenericName=installer
+Exec=raven-de-installer
+Icon=configure
+Type=Application
+Terminal=true
+Categories=System;
+Keywords=installer;user;setup;
