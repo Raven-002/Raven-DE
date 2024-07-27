@@ -218,7 +218,7 @@ function install_breeze_dracula_cursor() {
     do_operation mkdir -p "$USER_HOME_DIR/.local/share/icons"
     do_operation mkdir "$_TMP_THEME_DIR"
 
-    do_operation git clone git@github.com:dracula/gtk.git "$_TMP_THEME_DIR/dracula-gtk"
+    do_operation git clone https://github.com/dracula/gtk.git "$_TMP_THEME_DIR/dracula-gtk"
     do_operation rm -rf "$USER_HOME_DIR/.local/share/icons/Breeze-Dracula"
     do_operation cp -r "$_TMP_THEME_DIR/dracula-gtk/kde/cursors/Dracula-cursors" "$USER_HOME_DIR/.local/share/icons/Breeze-Dracula"
 
