@@ -321,7 +321,11 @@ function parse_args() {
     local arg_mode=(user-config) # set a default
     local usage=(
         "$app_name [-h|--help]"
-        "$app_name [-v|--verbose] [-d|--dryrun] [-m|--mode <user-config|user-uninstaller|add-user>]"
+        "$app_name [-v|--verbose] [-d|--dryrun] [-m|--mode <mode>]"
+        "available modes:"
+        "\tuser-config          - Configure user dotfiles."
+        "\tadd-user             - Add a user."
+        "\tadmin-config         - Change system settings."
     )
 
     # -D pulls parsed flags out of $@
@@ -416,6 +420,31 @@ function add_user() {
     yes_no_prompt "Configure User?" && do_operation sudo -Hu "$username" "$SCRIPTS_COMMAND" -m user-config
 }
 
+function admin_config() {
+    assert_is_root
+
+    if yes_no_prompt "Enable basic services?"; then
+        do_operation systemctl enable bluetooth.service || true
+        do_operation systemctl enable NetworkManager.service || true
+        do_operation systemctl enable sshd.service || true
+        do_operation systemctl enable sddm.service || true
+    fi
+
+    if yes_no_prompt "Start basic services?"; then
+        do_operation systemctl start bluetooth.service || true
+        do_operation systemctl start NetworkManager.service || true
+        do_operation systemctl start sshd.service || true
+    fi
+
+    if yes_no_prompt "Configure sudo for wheel group?"; then
+        if yes_no_prompt "Should wheel users enter a password when using sudo?"; then
+            do_operation sed -i 's/# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/' "/etc/sudoers"
+        else
+            do_operation sed -i 's/# %wheel ALL=(ALL:ALL) NOPASSWD: ALL/%wheel ALL=(ALL:ALL) NOPASSWD :ALL/' "/etc/sudoers"
+        fi
+    fi
+}
+
 function main() {
     assert_exists $INSTALLER_SRC_CONFIG_DIR
     parse_args "$@"
@@ -429,6 +458,9 @@ function main() {
         ;;
     'add-user')
         add_user
+        ;;
+    'admin-config')
+        admin_config
         ;;
     *)
         print_error "Invalid mode '$SCRIPT_MODE'"
