@@ -314,6 +314,18 @@ function install_yay() {
     do_operation rm -rf /tmp/yay-install-dir
 }
 
+function install_recommended_aur() {
+    yes_no_prompt "Install visual-studio-code?" && yay -S visual-studio-code-bin
+}
+
+function install_recommended_flatpaks() {
+    yes_no_prompt "Install Flatseal(flatpak permissions manager)?" && flatpak install com.github.tchx84.Flatseal
+    yes_no_prompt "Install Google Chrome?" && flatpak install com.google.Chrome
+    yes_no_prompt "Install MissionCenter(task manager)?" && flatpak install io.missioncenter.MissionCenter
+    yes_no_prompt "Install Nautilus(file manager)?" && flatpak install org.gnome.Nautilus
+    yes_no_prompt "Install Remmina(rdp client)?" && flatpak install org.remmina.Remmina
+}
+
 # *** Main ***********************************************
 function parse_args() {
     local app_name="rave-de-installer"
@@ -360,18 +372,6 @@ function parse_args() {
         return $EXIT_STATUS_FAILURE
     fi
     export SCRIPT_MODE="${arg_mode[-1]}"
-}
-
-function install_recommended_aur() {
-    yes_no_prompt "Install visual-studio-code?" && yay -S visual-studio-code-bin
-}
-
-function install_recommended_flatpaks() {
-    yes_no_prompt "Install Flatseal(flatpak permissions manager)?" && flatpak install com.github.tchx84.Flatseal
-    yes_no_prompt "Install Google Chrome?" && flatpak install com.google.Chrome
-    yes_no_prompt "Install MissionCenter(task manager)?" && flatpak install io.missioncenter.MissionCenter
-    yes_no_prompt "Install Nautilus(file manager)?" && flatpak install org.gnome.Nautilus
-    yes_no_prompt "Install Remmina(rdp client)?" && flatpak install org.remmina.Remmina
 }
 
 function user_config() {
