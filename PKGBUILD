@@ -5,7 +5,7 @@
 
 # Maintainer: Your Name <youremail@domain.com>
 pkgname=raven-de
-pkgver=0.1.0
+pkgver=1.0.0
 pkgrel=1
 epoch=
 pkgdesc="Desktop configuration"

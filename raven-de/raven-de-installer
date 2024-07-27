@@ -358,21 +358,39 @@ function parse_args() {
     export SCRIPT_MODE="${arg_mode[-1]}"
 }
 
+function install_recommended_aur() {
+    yes_no_prompt "Install visual-studio-code?" && yay -S visual-studio-code-bin
+}
+
+function install_recommended_flatpaks() {
+    yes_no_prompt "Install Flatseal(flatpak permissions manager)?" && flatpak install com.github.tchx84.Flatseal
+    yes_no_prompt "Install Google Chrome?" && flatpak install com.google.Chrome
+    yes_no_prompt "Install MissionCenter(task manager)?" && flatpak install io.missioncenter.MissionCenter
+    yes_no_prompt "Install Nautilus(file manager)?" && flatpak install org.gnome.Nautilus
+    yes_no_prompt "Install Remmina(rdp client)?" && flatpak install org.remmina.Remmina
+}
+
 function user_config() {
     do_operation cd $USER_HOME_DIR
     yes_no_prompt "Create user directories?" && create_user_directories
-    yes_no_prompt "Configure gtk breeze dark?" && configure_gtk_breeze_dark
-    yes_no_prompt "Configure qt breeze dark?" && configure_qt_breeze_dark
-    yes_no_prompt "Install breeze dracula cursor?" && install_breeze_dracula_cursor
-    yes_no_prompt "Configure flatpak breeze dark?" && configure_flatpak_breeze_dark
-    yes_no_prompt "Configure flatpak electron?" && configure_flatpak_electron
-    yes_no_prompt "Configure hypr?" && configure_hypr
-    yes_no_prompt "Configure waybar?" && configure_waybar
-    yes_no_prompt "Configure kitty?" && configure_kitty
-    yes_no_prompt "Configure rofi?" && configure_rofi
+    if yes_no_prompt "Apply breeze dark?"; then
+        yes_no_prompt "Configure gtk breeze dark?" && configure_gtk_breeze_dark
+        yes_no_prompt "Configure qt breeze dark?" && configure_qt_breeze_dark
+        yes_no_prompt "Install breeze dracula cursor?" && install_breeze_dracula_cursor
+        yes_no_prompt "Configure flatpak breeze dark?" && configure_flatpak_breeze_dark
+        yes_no_prompt "Configure flatpak electron?" && configure_flatpak_electron
+    fi
+    if yes_no_prompt "setup window manager?"; then
+        yes_no_prompt "Configure hypr?" && configure_hypr
+        yes_no_prompt "Configure waybar?" && configure_waybar
+        yes_no_prompt "Configure kitty?" && configure_kitty
+        yes_no_prompt "Configure rofi?" && configure_rofi
+    fi
     yes_no_prompt "Configure zsh?" && configure_zsh
     yes_no_prompt "Configure neovim?" && configure_neovim
-    yes_no_prompt "Install yay?" && install_yay
+    yay --version >/dev/null || yes_no_prompt "Install yay?" && install_yay
+    yay --version >/dev/null && yes_no_prompt "Install recommended aur apps?" && install_recommended_aur
+    yes_no_prompt "Install recommended flatpaks?" && install_recommended_flatpaks
 }
 
 function user_uninstall() {

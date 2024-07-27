@@ -2,7 +2,7 @@
 Name=Exit Hyprland
 Comment=Close the Hyprland session.
 GenericName=Logout
-Exec=
+Exec=hyprctl dispatch exit
 Icon=system-log-out
 Type=Application
 Categories=System;
