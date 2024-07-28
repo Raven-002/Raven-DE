@@ -94,6 +94,9 @@ depends=(
     meson
 
     inotify-tools
+    
+    # Display Manager
+    sddm
 
     # Theming
     qt5ct

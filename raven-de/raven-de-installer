@@ -7,6 +7,7 @@ SCRIPTS_COMMAND=$(readlink -f "$0")
 INSTALLER_DIR="${SCRIPTS_COMMAND:a:h}"
 PROJECT_ROOT="$INSTALLER_DIR/.."
 INSTALLER_SRC_CONFIG_DIR="$INSTALLER_DIR/config-files"
+INSTALLER_SRC_SYSTEM_CONFIG_DIR="$INSTALLER_DIR/system-config-files"
 
 EXIT_STATUS_SUCCESS=0
 EXIT_STATUS_FAILURE=1
@@ -326,6 +327,17 @@ function install_recommended_flatpaks() {
     yes_no_prompt "Install Remmina(rdp client)?" && flatpak install org.remmina.Remmina
 }
 
+function install_sddm_config() {
+    assert_is_root
+    for theme_dir in `ls "$INSTALLER_SRC_SYSTEM_CONFIG_DIR/sddm-themes"`; do
+        create_link_in_folder "$INSTALLER_SRC_SYSTEM_CONFIG_DIR/sddm-themes/$theme_dir" "/usr/share/sddm/themes"
+    done
+    for conf_file in `ls "$INSTALLER_SRC_SYSTEM_CONFIG_DIR/sddm.conf.d"`; do
+        create_link_in_folder "$INSTALLER_SRC_SYSTEM_CONFIG_DIR/sddm.conf.d/$conf_file" "/etc/sddm.conf.d"
+    done
+    do_operation systemctl enable sddm.service
+}
+
 # *** Main ***********************************************
 function parse_args() {
     local app_name="rave-de-installer"
@@ -443,6 +455,8 @@ function admin_config() {
             do_operation sed -i 's/# %wheel ALL=(ALL:ALL) NOPASSWD: ALL/%wheel ALL=(ALL:ALL) NOPASSWD :ALL/' "/etc/sudoers"
         fi
     fi
+
+    yes_no_prompt "Install sddm config?" && install_sddm_config
 }
 
 function main() {
