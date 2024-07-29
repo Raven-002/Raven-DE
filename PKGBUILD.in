@@ -165,6 +165,7 @@ package() {
     # Copy folders
     cp --recursive --no-dereference --no-target-directory $srcdir/$pkgname-$pkgver/raven-de $pkgdir/usr/share/raven-de
     cp --recursive --no-dereference --no-target-directory $srcdir/$pkgname-$pkgver/applications $pkgdir/usr/share/applications
+    cp --recursive --no-dereference $srcdir/$pkgname-$pkgver/binaries/* $pkgdir/usr/bin/
     rm -rf $pkgdir/usr/share/raven-de/config-files/zsh/oh-my-zsh
     
     # Symlink scripts
