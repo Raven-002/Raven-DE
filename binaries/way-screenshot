@@ -1,0 +1,14 @@
+#!/bin/zsh
+
+set -e
+
+# Take region
+REGION="$(slurp -d)"
+
+# Generate file path
+SCREENSHOT_FILE="$(xdg-user-dir PICTURES)/screenshots/$(date +'%Y-%m-%d')/$(date +'%Y-%m-%d_%H-%M-%S_grim.png')"
+mkdir -p "`dirname "$SCREENSHOT_FILE"`"
+
+# Take screenshot
+grim -g "$REGION" - | tee "$SCREENSHOT_FILE" | wl-copy
+echo "screenshot saved to $SCREENSHOT_FILE successfully."
