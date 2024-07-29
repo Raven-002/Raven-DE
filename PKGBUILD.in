@@ -87,6 +87,10 @@ depends=(
     iio-sensor-proxy
     xorg-xhost
 
+    # Screenshots
+    grim
+    slurp
+
     # hyprpm deps
     cmake
     ninja
