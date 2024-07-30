@@ -230,10 +230,7 @@
         "on-click": "pavucontrol"
     },
     "hyprland/language": {
-        "format": "{}",
-        "format-en": "us",
-        "keyboard-name": "at-translated-set-2-keyboard",
-        "on-click": "hyprctl switchxkblayout at-translated-set-2-keyboard next"
+        "format": "{short}"
     },
     "custom/media": {
         "format": "{icon} {}",
