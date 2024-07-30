@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 
 set -e
 
@@ -6,9 +6,23 @@ set -e
 REGION="$(slurp -d)"
 
 # Generate file path
-SCREENSHOT_FILE="$(xdg-user-dir PICTURES)/screenshots/$(date +'%Y-%m-%d')/$(date +'%Y-%m-%d_%H-%M-%S_grim.png')"
-mkdir -p "`dirname "$SCREENSHOT_FILE"`"
+IFS=':' read -a output_dirs <<<"$WAY_SCREENSHOT_DIRS"
+SCREENSHOT_FILE_NAME="$(date +'%Y-%m-%d')/$(date +'%Y-%m-%d_%H-%M-%S_grim.png')"
+BASE_DIR="$(xdg-user-dir PICTURES)/screenshots/"
+BASE_FILE="$BASE_DIR/$SCREENSHOT_FILE_NAME"
+
+for dir in ${output_dirs[@]} $BASE_DIR; do
+    file_path="$dir/$SCREENSHOT_FILE_NAME"
+    mkdir -p "$(dirname "$file_path")" || continue
+done
 
 # Take screenshot
-grim -g "$REGION" - | tee "$SCREENSHOT_FILE" | wl-copy
-echo "screenshot saved to $SCREENSHOT_FILE successfully."
+grim -t "png" -g "$REGION" - | tee "$BASE_FILE" | wl-copy --type "image/png" 2>/dev/null
+echo "screenshot saved to $BASE_FILE successfully."
+if ! [ -z "$output_dirs" ]; then
+    for dir in ${output_dirs[@]}; do
+        file_path="$dir/$SCREENSHOT_FILE_NAME"
+        cp -T $BASE_FILE $file_path || continue
+        echo "screenshot saved to $file_path successfully."
+    done
+fi
