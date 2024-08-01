@@ -48,6 +48,7 @@ depends=(
 
     ripgrep
     tree
+    btop
 
     kitty
     samba
