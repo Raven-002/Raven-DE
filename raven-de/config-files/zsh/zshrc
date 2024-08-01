@@ -22,6 +22,8 @@ export ZSH="$HOME/.local/share/oh-my-zsh"
 export ZSH_COMPDUMP=$ZSH/cache/.zcompdump-$HOST
 source_if_exists "$HOME/.config/zsh/aliases"
 source_if_exists "$HOME/.config/zsh/env"
+source_if_exists "$HOME/.config/raven-de/zsh/aliases"
+source_if_exists "$HOME/.config/raven-de/zsh/env"
 source_if_exists "$HOME/.aliases"
 source_if_exists "$HOME/.env"
 
