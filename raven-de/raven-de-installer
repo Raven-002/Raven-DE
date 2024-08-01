@@ -14,6 +14,7 @@ EXIT_STATUS_FAILURE=1
 DEV_NULL='/dev/null'
 
 USER_CONFIG_DIR="$HOME/.config"
+CUSTOM_USER_CONFIG_DIR="$USER_CONFIG_DIR/raven-de"
 GLOBAL_CONFIG_DIR="/etc/xdg"
 USER_HOME_DIR="$HOME"
 
@@ -56,6 +57,24 @@ function do_operation() {
     fi
 
     "${@}"
+}
+
+function best_effort() {
+    assert_not_empty "$1"
+
+    if ! [ -z "$DRYRUN" ]; then
+        print_info "\e[1;32mDry-run:\e[0;37m $@\e[0m"
+        return $EXIT_STATUS_SUCCESS
+    fi
+
+    if ! [ -z "$VERBOSE" ]; then
+        print_info "\e[1;32mRunning:\e[0;37m $@\e[0m"
+        return $EXIT_STATUS_SUCCESS
+    fi
+
+    if "${@}"; then
+        return
+    fi
 }
 
 function print_error() { # Print error to stderr
@@ -197,6 +216,18 @@ function link_to_user_config() {
 }
 
 # *** Functions ******************************************
+function initialize_user_config_dir() {
+    if [ -e "$CUSTOM_USER_CONFIG_DIR" ]; then
+        return
+    fi
+    do_operation mkdir -p "$CUSTOM_USER_CONFIG_DIR"
+    pushd $CUSTOM_USER_CONFIG_DIR
+    best_effort git init --initial-branch=main
+    best_effort git commit --allow-empty -m "Initial Commit"
+    popd
+    print_note "User config repo added in '$CUSTOM_USER_CONFIG_DIR'. You can clone your existing settings or use the new repo."
+}
+
 function create_user_directories() {
     do_operation xdg-user-dirs-update
 }
@@ -258,11 +289,17 @@ function configure_flatpak_electron() {
 }
 
 function configure_hypr() {
-    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/hypr"
-    create_link_in_folder "$INSTALLER_SRC_CONFIG_DIR/hypr/hyprland-portals.conf" "$USER_CONFIG_DIR/xdg-desktop-portal"
-    do_operation mkdir -p $USER_CONFIG_DIR/hypr-user/
-    do_operation touch $USER_CONFIG_DIR/hypr-user/hyprland-user-programs.conf
-    do_operation touch $USER_CONFIG_DIR/hypr-user/hyprland-user-config.conf
+    create_link_in_folder "$INSTALLER_SRC_CONFIG_DIR/hypr/hyprland.conf" "$USER_CONFIG_DIR/hypr"
+    create_link_in_folder "$INSTALLER_SRC_CONFIG_DIR/hypr/hyprland-config" "$USER_CONFIG_DIR/hypr"
+    create_link_in_folder "$INSTALLER_SRC_CONFIG_DIR/hypr/hypridle.conf" "$USER_CONFIG_DIR/hypr"
+    create_link_in_folder "$INSTALLER_SRC_CONFIG_DIR/hypr/hyprlock.conf" "$USER_CONFIG_DIR/hypr"
+    create_link_in_folder "$INSTALLER_SRC_CONFIG_DIR/hypr/hyprpaper.conf" "$USER_CONFIG_DIR/hypr"
+
+    initialize_user_config_dir
+    mkdir -p "$CUSTOM_USER_CONFIG_DIR/hypr"
+    do_operation touch $CUSTOM_USER_CONFIG_DIR/hypr/hyprland-user-programs.conf
+    do_operation touch $CUSTOM_USER_CONFIG_DIR/hypr/hyprland-user-config.conf
+    print_note "Added hyprland user config files in '$CUSTOM_USER_CONFIG_DIR/hypr'."
 }
 
 function configure_waybar() {
@@ -290,11 +327,21 @@ function configure_zsh() {
     fi
 
     create_link "$USER_CONFIG_DIR/zsh/zshrc" "$USER_HOME_DIR/.zshrc"
+
+    initialize_user_config_dir
+    do_operation mkdir -p "$CUSTOM_USER_CONFIG_DIR/zsh"
+    do_operation touch "$CUSTOM_USER_CONFIG_DIR/zsh/aliases"
+    do_operation touch "$CUSTOM_USER_CONFIG_DIR/zsh/env"
+    print_note "Added zsh user config files in '$CUSTOM_USER_CONFIG_DIR/zsh'."
 }
 
 function configure_neovim() {
     do_operation git clone https://github.com/Raven-002/nvim.git "$USER_CONFIG_DIR/raven-de-nvim"
     create_link "$USER_CONFIG_DIR/raven-de-nvim" "$USER_CONFIG_DIR/nvim"
+}
+
+function is_yay_installed() {
+    yay --version 1>/dev/null 2>&1 0</dev/null
 }
 
 function install_yay() {
@@ -329,10 +376,10 @@ function install_recommended_flatpaks() {
 
 function install_sddm_config() {
     assert_is_root
-    for theme_dir in `ls "$INSTALLER_SRC_SYSTEM_CONFIG_DIR/sddm-themes"`; do
+    for theme_dir in $(ls "$INSTALLER_SRC_SYSTEM_CONFIG_DIR/sddm-themes"); do
         create_link_in_folder "$INSTALLER_SRC_SYSTEM_CONFIG_DIR/sddm-themes/$theme_dir" "/usr/share/sddm/themes"
     done
-    for conf_file in `ls "$INSTALLER_SRC_SYSTEM_CONFIG_DIR/sddm.conf.d"`; do
+    for conf_file in $(ls "$INSTALLER_SRC_SYSTEM_CONFIG_DIR/sddm.conf.d"); do
         create_link_in_folder "$INSTALLER_SRC_SYSTEM_CONFIG_DIR/sddm.conf.d/$conf_file" "/etc/sddm.conf.d"
     done
     do_operation systemctl enable sddm.service
@@ -404,8 +451,12 @@ function user_config() {
     fi
     yes_no_prompt "Configure zsh?" && configure_zsh
     yes_no_prompt "Configure neovim?" && configure_neovim
-    yay --version >/dev/null || yes_no_prompt "Install yay?" && install_yay
-    yay --version >/dev/null && yes_no_prompt "Install recommended aur apps?" && install_recommended_aur
+    if ! is_yay_installed; then
+        yes_no_prompt "Install yay?" && install_yay
+    fi
+    if is_yay_installed; then
+        yes_no_prompt "Install recommended aur apps?" && install_recommended_aur
+    fi
     yes_no_prompt "Install recommended flatpaks?" && install_recommended_flatpaks
 }
 
@@ -436,16 +487,16 @@ function admin_config() {
     assert_is_root
 
     if yes_no_prompt "Enable basic services?"; then
-        do_operation systemctl enable bluetooth.service || true
-        do_operation systemctl enable NetworkManager.service || true
-        do_operation systemctl enable sshd.service || true
-        do_operation systemctl enable sddm.service || true
+        best_effort systemctl enable bluetooth.service
+        best_effort systemctl enable NetworkManager.service
+        best_effort systemctl enable sshd.service
+        best_effort systemctl enable sddm.service
     fi
 
     if yes_no_prompt "Start basic services?"; then
-        do_operation systemctl start bluetooth.service || true
-        do_operation systemctl start NetworkManager.service || true
-        do_operation systemctl start sshd.service || true
+        best_effort systemctl start bluetooth.service
+        best_effort systemctl start NetworkManager.service
+        best_effort systemctl start sshd.service
     fi
 
     if yes_no_prompt "Configure sudo for wheel group?"; then
