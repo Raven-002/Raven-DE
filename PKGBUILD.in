@@ -54,6 +54,8 @@ depends=(
 
     flatpak
 
+    firefox
+
     # Fonts
     ttf-firacode-nerd
     ttf-iosevka-nerd
@@ -61,6 +63,7 @@ depends=(
     ttf-nerd-fonts-symbols
     ttf-nerd-fonts-symbols-common
     ttf-nerd-fonts-symbols-mono
+    ttf-font-awesome
 
     noto-fonts
     ttf-dejavu
