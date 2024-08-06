@@ -112,15 +112,18 @@
     },
     "clock": {
         // "timezone": "America/New_York",
+        "format": "{:%H:%M:%S %d.%m.%Y}",
         "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
-        "format-alt": "{:%Y-%m-%d}"
+        "interval": 1 
     },
     "cpu": {
         "format": "{usage}% ",
-        "tooltip": false
+        "tooltip": false,
+        "interval": 3
     },
     "memory": {
-        "format": "{}% "
+        "format": "{}% ",
+        "interval": 3
     },
     "temperature": {
         // "thermal-zone": 2,
