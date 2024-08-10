@@ -8,6 +8,7 @@ INSTALLER_DIR="${SCRIPTS_COMMAND:a:h}"
 PROJECT_ROOT="$INSTALLER_DIR/.."
 INSTALLER_SRC_CONFIG_DIR="$INSTALLER_DIR/config-files"
 INSTALLER_SRC_SYSTEM_CONFIG_DIR="$INSTALLER_DIR/system-config-files"
+INSTALLER_SRC_ASSETS_DIR="$INSTALLER_DIR/assets"
 
 EXIT_STATUS_SUCCESS=0
 EXIT_STATUS_FAILURE=1
@@ -215,7 +216,6 @@ function link_to_user_config() {
     create_link_in_folder "$src" "$USER_CONFIG_DIR"
 }
 
-# *** Functions ******************************************
 function initialize_user_config_dir() {
     if [ -e "$CUSTOM_USER_CONFIG_DIR" ]; then
         return
@@ -228,6 +228,30 @@ function initialize_user_config_dir() {
     print_note "User config repo added in '$CUSTOM_USER_CONFIG_DIR'. You can clone your existing settings or use the new repo."
 }
 
+function create_user_file() {
+    assert_not_empty "$1"
+    dst="$CUSTOM_USER_CONFIG_DIR/${1}"
+    default="${2}"
+
+
+    initialize_user_config_dir
+    mkdir -p "`dirname $dst`"
+
+    if [ -e "$dst" ]; then
+        print_note "Using existing user config file '$dst'."
+        return
+    fi
+    if [ -z "$default" ]; then
+        do_operation touch "$dst"
+    else
+        assert_exists "$default"
+        create_link "$default" "$dst"
+    fi
+    print_note "Added user config file '$dst'."
+}
+
+
+# *** Functions ******************************************
 function create_user_directories() {
     do_operation xdg-user-dirs-update
 }
@@ -296,10 +320,10 @@ function configure_hypr() {
     create_link_in_folder "$INSTALLER_SRC_CONFIG_DIR/hypr/hyprpaper.conf" "$USER_CONFIG_DIR/hypr"
 
     initialize_user_config_dir
-    mkdir -p "$CUSTOM_USER_CONFIG_DIR/hypr"
-    do_operation touch $CUSTOM_USER_CONFIG_DIR/hypr/hyprland-user-programs.conf
-    do_operation touch $CUSTOM_USER_CONFIG_DIR/hypr/hyprland-user-config.conf
-    print_note "Added hyprland user config files in '$CUSTOM_USER_CONFIG_DIR/hypr'."
+    create_user_file "hypr/hyprland-user-programs.conf"
+    create_user_file "hypr/hyprland-user-config.conf"
+    create_user_file "images/lockscreen" "$INSTALLER_SRC_ASSETS_DIR/images/lock"
+    create_user_file "images/background" "$INSTALLER_SRC_ASSETS_DIR/images/background"
 }
 
 function configure_waybar() {
@@ -308,6 +332,7 @@ function configure_waybar() {
 
 function configure_kitty() {
     link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/kitty"
+    create_user_file "kitty/kitty.conf"
 }
 
 function configure_rofi() {
