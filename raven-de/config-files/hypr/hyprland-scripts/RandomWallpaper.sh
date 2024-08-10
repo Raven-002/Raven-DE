@@ -1,6 +1,7 @@
 #!/bin/sh
 
-WALLPAPER_DIR="/usr/share/raven-de/binaries/Wallpapers"
+WALLPAPER_DIR="/usr/share/raven-de/config-files/wallpapers"
+WALLPAPER_CONFIG_FILE="$HOME/.config/wallpapers"
 while true; do 
 	sleep 1
 
