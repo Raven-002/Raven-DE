@@ -323,7 +323,7 @@ function configure_hypr() {
     create_user_file "hypr/hyprland-user-programs.conf"
     create_user_file "hypr/hyprland-user-config.conf"
     create_user_file "images/lockscreen" "$INSTALLER_SRC_ASSETS_DIR/images/lock"
-    create_user_file "images/background" "$INSTALLER_SRC_ASSETS_DIR/images/background"
+    create_user_file "images/background" "$INSTALLER_SRC_ASSETS_DIR/images/arch-black-4k.png"
 }
 
 function configure_waybar() {
