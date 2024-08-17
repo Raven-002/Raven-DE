@@ -33,6 +33,7 @@ depends=(
     libva-utils
     pipewire-jack
     pipewire-pulse
+    pavucontrol-qt
     posix
     sudo
     btrfs-progs

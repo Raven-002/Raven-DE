@@ -1,92 +1,134 @@
+/* ----------------------------------------------------------------
+ * -- General
+ * ------------------------------------------------------------- */
 * {
     border: none;
     border-radius: 0;
-    font-family: "Source Sans Pro", "FiraCode";
-    font-size: 15px;
+    font-family: "FiraCode";
+    font-size: 14px;
     box-shadow: none;
     text-shadow: none;
     transition-duration: 0s;
 }
 
+
+/* ----------------------------------------------------------------
+ * -- Bar
+ * ------------------------------------------------------------- */
 window#waybar {
-    color: rgba(137, 221, 255, 1);  /* Lighter Blue Foreground */
-    background-color: rgba(40, 44, 52, 0.4);  /* Background */
-    border-bottom: 2px solid rgba(137, 221, 255, 0.4);  /* Border */
+    color: rgb(255, 255, 255);
+    background-color: rgba(25, 25, 25, 0.5);
 }
 
-window#waybar.solo {
-    color: rgba(137, 221, 255, 1);  /* Lighter Blue Foreground */
-}
 
+/* ----------------------------------------------------------------
+ * -- Workspaces
+ * ------------------------------------------------------------- */
 #workspaces {
     margin: 0 5px;
 }
 
-#custom-scratchpad {
-    margin: 0px 5px;
-    padding: 0px 5px;
-}
-
 #workspaces button {
     padding: 0 5px;
-    color: rgba(137, 221, 255, 1);  /* Lighter Blue Foreground */
 }
 
-#workspaces button.focused {
-    color: rgba(86, 182, 252, 1);  /* Focused workspace */
+
+/* ----------------------------------------------------------------
+ * -- System tray area
+ * ------------------------------------------------------------- */
+#idle_inhibitor,
+#cpu,
+#memory,
+#tray,
+#pulseaudio,
+#backlight,
+#battery {
+    margin: 0px;
+    padding-right: 6px;
+    padding-left: 6px;
+    border-bottom: 2px solid rgba(230, 230, 230, 0.7);
+    background: rgba(170, 180, 190, 0.15);
 }
 
+#idle_inhibitor {
+    padding-right: 12px;
+}
+
+#cpu {
+    min-width: 50px;
+}
+
+#memory {
+    min-width: 50px;
+}
+
+#battery {
+    margin: 0px;
+    margin-right: 6px;
+    padding-left: 4px;
+    padding-right: 8px;
+    background: rgba(170, 180, 190, 0.15);
+}
+
+#idle_inhibitor:hover,
+#memory:hover,
+#cpu:hover,
+#tray>widget:hover,
+#pulseaudio:hover,
+#backlight:hover,
+#battery:hover {
+    background: rgba(170, 180, 190, 0.3);
+}
+
+
+/* ----------------------------------------------------------------
+ * -- Language, Clock, Notifications
+ * ------------------------------------------------------------- */
+#language,
+#clock,
+#custom-swaync {
+    margin: 0 3px;
+    padding: 0 5px;
+}
+
+#custom-swaync {
+    padding-right: 9px;
+    margin-right: 6px;
+}
+
+#custom-swaync:hover {
+    background: rgba(170, 180, 190, 0.3);
+}
+
+
+/* ----------------------------------------------------------------
+ * -- Colors
+ * ------------------------------------------------------------- */
+#workspaces button.focused,
 #workspaces button.visible {
-    color: rgba(86, 182, 252, 1);  /* Visible workspace */
+    color: rgb(160, 215, 255);
 }
 
-#workspaces button.urgent {
-    color: rgba(224, 108, 117, 1);  /* Urgent workspace */
+#custom-swaync.dnd-notification,
+#custom-swaync.dnd-none {
+    color: rgb(150, 150, 150);
 }
 
-#mode, 
-#battery, 
-#cpu, 
-#memory, 
-#network, 
-#bluetooth,
-#pulseaudio, 
-#idle_inhibitor, 
-#temperature,
-#custom-layout,
-#backlight {
-    margin: 0px 6px 0px 10px;
-    /* min-width: 30px; */
-}
-
-#clock {
-    margin: 0px 6px 0px 10px;
-}
-
+#tray>.needs-attention,
 #battery.warning {
-   color: rgba(209, 154, 102, 1);  /* Warning */
+    color: rgba(210, 155, 100, 1);
 }
 
+#workspaces button.urgent,
 #battery.critical {
-    color: rgba(224, 108, 117, 1);  /* Critical */
+    color: rgba(225, 110, 120, 1);
 }
 
+#custom-swaync.notification,
 #battery.charging {
-    color: rgba(171, 178, 191, 1);  /* Charging */
+    color: rgb(160, 190, 210);
 }
 
-#bluetooth.disabled {
-    color: rgba(92, 99, 112, 1);  /* Disabled */
-}
-
-#bluetooth.off {
-    color: rgba(92, 99, 112, 1);  /* Off */
-}
-
-#bluetooth.connected {
-    color: rgba(86, 182, 252, 1);  /* Connected */
-}
-
-#network.wifi {
-    color: rgba(86, 182, 252, 1);  /* Connected */
+#battery.plugged {
+    color: rgb(160, 210, 180);
 }
