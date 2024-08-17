@@ -82,18 +82,22 @@ window#waybar {
 
 
 /* ----------------------------------------------------------------
- * -- Language and Clock
+ * -- Language, Clock, Notifications
  * ------------------------------------------------------------- */
-#language {
-    margin-left: 5px;
-    margin-right: 5px;
-    padding-left: 5px;
-    padding-right: 5px;
-    background: rgba(170, 180, 190, 0.15);
+#language,
+#clock,
+#custom-swaync {
+    margin: 0 3px;
+    padding: 0 5px;
 }
 
-#clock {
-    margin: 0px 6px 0px 10px;
+#custom-swaync {
+    padding-right: 9px;
+    margin-right: 6px;
+}
+
+#custom-swaync:hover {
+    background: rgba(170, 180, 190, 0.3);
 }
 
 
@@ -103,6 +107,11 @@ window#waybar {
 #workspaces button.focused,
 #workspaces button.visible {
     color: rgb(160, 215, 255);
+}
+
+#custom-swaync.dnd-notification,
+#custom-swaync.dnd-none {
+    color: rgb(150, 150, 150);
 }
 
 #tray>.needs-attention,
@@ -115,6 +124,7 @@ window#waybar {
     color: rgba(225, 110, 120, 1);
 }
 
+#custom-swaync.notification,
 #battery.charging {
     color: rgb(160, 190, 210);
 }

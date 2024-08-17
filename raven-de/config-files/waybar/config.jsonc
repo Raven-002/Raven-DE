@@ -17,16 +17,15 @@
         "idle_inhibitor",
         "cpu",
         "memory",
-
         "tray",
-
         "pulseaudio",
         "power-profiles-daemon",
         "backlight",
         "battery",
         "keyboard-state",
         "hyprland/language",
-        "clock"
+        "clock",
+        "custom/swaync"
     ],
     "hyprland/workspaces": {
         "disable-scroll": true,
@@ -66,7 +65,7 @@
     "clock": {
         "format": "{:%H:%M:%S | %d.%m.%Y}",
         "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
-        "interval": 1 
+        "interval": 1
     },
     "cpu": {
         "format": "{usage}% ",
@@ -158,5 +157,25 @@
     },
     "hyprland/language": {
         "format": "{short}"
+    },
+    "custom/swaync": {
+        "tooltip": true,
+        "format": "{icon}",
+        "format-icons": {
+            "notification": "󱅫",
+            "none": "",
+            "dnd-notification": "󰂛",
+            "dnd-none": "󰂛",
+            "inhibited-notification": "",
+            "inhibited-none": "",
+            "dnd-inhibited-notification": "",
+            "dnd-inhibited-none": ""
+        },
+        "return-type": "json",
+        "exec-if": "which swaync-client",
+        "exec": "swaync-client -swb",
+        "on-click": "sleep 0.1 && swaync-client -t -sw",
+        "on-click-right": "sleep 0.1 && swaync-client -d -sw",
+        "escape": true
     }
 }
