@@ -182,9 +182,14 @@ function create_backup() {
 function create_link() {
     src="${1}"
     dst="${2}"
+    flag="${3}"
 
     assert_exists "$src"
     assert_not_empty "$dst"
+    if [[ "${3}" != "" && "${3}" != "-r" ]]; then
+        print_error "Invalid value for 3rd param - '${3}'!"
+        exit $EXIT_STATUS_FAILURE
+    fi
 
     if [[ -e "$dst" && ! -L "$dst" ]]; then
         create_backup "$dst"
@@ -196,24 +201,30 @@ function create_link() {
     if [ -z "$DRYRUN" ]; then
         assert_dir "$(dirname "$dst")"
     fi
-    do_operation ln -sfrT "$src" "$dst"
+    if [[ "$flag" == "-r" ]]; then
+        do_operation ln -sfrT "$src" "$dst"
+    else
+        do_operation ln -sfT "$src" "$dst"
+    fi
 }
 
 function create_link_in_folder() {
     src="${1}"
     dst="${2}"
+    flag="${3}"
 
     assert_exists "$src"
     assert_not_empty "$dst"
 
-    create_link "$src" "$dst/$(basename $src)"
+    create_link "$src" "$dst/$(basename $src)" "$flag"
 }
 
 function link_to_user_config() {
     src="${1}"
+    flag="${2}"
     assert_exists "$src"
 
-    create_link_in_folder "$src" "$USER_CONFIG_DIR"
+    create_link_in_folder "$src" "$USER_CONFIG_DIR" "$flag"
 }
 
 function initialize_user_config_dir() {
@@ -232,6 +243,7 @@ function create_user_file() {
     assert_not_empty "$1"
     dst="$CUSTOM_USER_CONFIG_DIR/${1}"
     default="${2}"
+    flag="${3}"
 
 
     initialize_user_config_dir
@@ -245,15 +257,36 @@ function create_user_file() {
         do_operation touch "$dst"
     else
         assert_exists "$default"
-        create_link "$default" "$dst"
+        create_link "$default" "$dst" "$flag"
     fi
     print_note "Added user config file '$dst'."
 }
 
 
 # *** Functions ******************************************
+function create_default_user_asserts() {
+    create_user_file "images/lockscreen" "$INSTALLER_SRC_ASSETS_DIR/images/lock"
+    create_user_file "images/background" "$INSTALLER_SRC_ASSETS_DIR/images/arch-black-4k.png"
+    create_user_file "face" "$INSTALLER_SRC_ASSETS_DIR/images/user.png"
+
+    # Add execute permitions to all basedirs leading to the config dir.
+    _accumulated_path=""
+    for dir in $(tr '/' ' ' <<<"$CUSTOM_USER_CONFIG_DIR"); do
+        _accumulated_path="$_accumulated_path/$dir"
+        dir=$_accumulated_path
+        if [[ "$dir" == "/" || "$dir" == "/home" ]]; then
+            continue
+        fi
+        do_operation setfacl -m u:sddm:x $dir
+    done
+    do_operation setfacl -m u:sddm:r "$CUSTOM_USER_CONFIG_DIR/face"
+    create_link "$CUSTOM_USER_CONFIG_DIR/face" "$HOME/.face"
+}
+
 function create_user_directories() {
     do_operation xdg-user-dirs-update
+    initialize_user_config_dir
+    create_default_user_asserts
 }
 
 function configure_gtk_breeze_dark() {
@@ -322,9 +355,7 @@ function configure_hypr() {
     initialize_user_config_dir
     create_user_file "hypr/hyprland-user-programs.conf"
     create_user_file "hypr/hyprland-user-config.conf"
-    create_user_file "images/lockscreen" "$INSTALLER_SRC_ASSETS_DIR/images/lock"
-    create_user_file "images/background" "$INSTALLER_SRC_ASSETS_DIR/images/arch-black-4k.png"
-    create_user_file "face" "$INSTALLER_SRC_ASSETS_DIR/images/user.png"
+    create_default_user_asserts
 }
 
 function configure_waybar() {
@@ -352,13 +383,10 @@ function configure_zsh() {
         do_operation git clone --depth=1 https://github.com/romkatv/powerlevel10k.git $ZSH/custom/themes/powerlevel10k
     fi
 
-    create_link "$USER_CONFIG_DIR/zsh/zshrc" "$USER_HOME_DIR/.zshrc"
+    create_link "$USER_CONFIG_DIR/zsh/zshrc" "$USER_HOME_DIR/.zshrc" -r
 
-    initialize_user_config_dir
-    do_operation mkdir -p "$CUSTOM_USER_CONFIG_DIR/zsh"
-    do_operation touch "$CUSTOM_USER_CONFIG_DIR/zsh/aliases"
-    do_operation touch "$CUSTOM_USER_CONFIG_DIR/zsh/env"
-    print_note "Added zsh user config files in '$CUSTOM_USER_CONFIG_DIR/zsh'."
+    create_user_file "zsh/aliases"
+    create_user_file "zsh/env"
 }
 
 function configure_neovim() {
@@ -415,7 +443,7 @@ function install_sddm_config() {
 function parse_args() {
     local app_name="rave-de-installer"
     local flag_help flag_verbose flag_dryrun
-    local arg_mode=(user-config) # set a default
+    local arg_mode
     local usage=(
         "$app_name [-h|--help]"
         "$app_name [-v|--verbose] [-d|--dryrun] [-m|--mode <mode>]"
@@ -539,6 +567,12 @@ function admin_config() {
 function main() {
     assert_exists $INSTALLER_SRC_CONFIG_DIR
     parse_args "$@"
+
+    if [ -z "$SCRIPT_MODE" ]; then
+        read_prompt "Choose mode [user-config add-user admin-config]"
+        SCRIPT_MODE=$_prompt_result
+    fi
+     
     assert_not_empty "$SCRIPT_MODE"
     case "$SCRIPT_MODE" in
     'user-config')
