@@ -252,8 +252,29 @@ function create_user_file() {
 
 
 # *** Functions ******************************************
+function create_default_user_asserts() {
+    create_user_file "images/lockscreen" "$INSTALLER_SRC_ASSETS_DIR/images/lock"
+    create_user_file "images/background" "$INSTALLER_SRC_ASSETS_DIR/images/arch-black-4k.png"
+    create_user_file "face" "$INSTALLER_SRC_ASSETS_DIR/images/user.png"
+
+    # Add execute permitions to all basedirs leading to the config dir.
+    _accumulated_path=""
+    for dir in $(tr '/' ' ' <<<"$CUSTOM_USER_CONFIG_DIR"); do
+        _accumulated_path="$_accumulated_path/$dir"
+        dir=$_accumulated_path
+        if [[ "$dir" == "/" || "$dir" == "/home" ]]; then
+            continue
+        fi
+        do_operation setfacl -m u:sddm:x $dir
+    done
+    do_operation setfacl -m u:sddm:r "$CUSTOM_USER_CONFIG_DIR/face"
+    create_link "$CUSTOM_USER_CONFIG_DIR/face" "$HOME/.face"
+}
+
 function create_user_directories() {
     do_operation xdg-user-dirs-update
+    initialize_user_config_dir
+    create_default_user_asserts
 }
 
 function configure_gtk_breeze_dark() {
@@ -322,9 +343,7 @@ function configure_hypr() {
     initialize_user_config_dir
     create_user_file "hypr/hyprland-user-programs.conf"
     create_user_file "hypr/hyprland-user-config.conf"
-    create_user_file "images/lockscreen" "$INSTALLER_SRC_ASSETS_DIR/images/lock"
-    create_user_file "images/background" "$INSTALLER_SRC_ASSETS_DIR/images/arch-black-4k.png"
-    create_user_file "face" "$INSTALLER_SRC_ASSETS_DIR/images/user.png"
+    create_default_user_asserts
 }
 
 function configure_waybar() {
