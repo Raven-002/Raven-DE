@@ -182,9 +182,14 @@ function create_backup() {
 function create_link() {
     src="${1}"
     dst="${2}"
+    flag="${3}"
 
     assert_exists "$src"
     assert_not_empty "$dst"
+    if [[ "${3}" != "" && "${3}" != "-r" ]]; then
+        print_error "Invalid value for 3rd param - '${3}'!"
+        exit $EXIT_STATUS_FAILURE
+    fi
 
     if [[ -e "$dst" && ! -L "$dst" ]]; then
         create_backup "$dst"
@@ -196,24 +201,30 @@ function create_link() {
     if [ -z "$DRYRUN" ]; then
         assert_dir "$(dirname "$dst")"
     fi
-    do_operation ln -sfrT "$src" "$dst"
+    if [[ "$flag" == "-r" ]]; then
+        do_operation ln -sfrT "$src" "$dst"
+    else
+        do_operation ln -sfT "$src" "$dst"
+    fi
 }
 
 function create_link_in_folder() {
     src="${1}"
     dst="${2}"
+    flag="${3}"
 
     assert_exists "$src"
     assert_not_empty "$dst"
 
-    create_link "$src" "$dst/$(basename $src)"
+    create_link "$src" "$dst/$(basename $src)" "$flag"
 }
 
 function link_to_user_config() {
     src="${1}"
+    flag="${2}"
     assert_exists "$src"
 
-    create_link_in_folder "$src" "$USER_CONFIG_DIR"
+    create_link_in_folder "$src" "$USER_CONFIG_DIR" "$flag"
 }
 
 function initialize_user_config_dir() {
@@ -232,6 +243,7 @@ function create_user_file() {
     assert_not_empty "$1"
     dst="$CUSTOM_USER_CONFIG_DIR/${1}"
     default="${2}"
+    flag="${3}"
 
 
     initialize_user_config_dir
@@ -245,7 +257,7 @@ function create_user_file() {
         do_operation touch "$dst"
     else
         assert_exists "$default"
-        create_link "$default" "$dst"
+        create_link "$default" "$dst" "$flag"
     fi
     print_note "Added user config file '$dst'."
 }
@@ -371,13 +383,10 @@ function configure_zsh() {
         do_operation git clone --depth=1 https://github.com/romkatv/powerlevel10k.git $ZSH/custom/themes/powerlevel10k
     fi
 
-    create_link "$USER_CONFIG_DIR/zsh/zshrc" "$USER_HOME_DIR/.zshrc"
+    create_link "$USER_CONFIG_DIR/zsh/zshrc" "$USER_HOME_DIR/.zshrc" -r
 
-    initialize_user_config_dir
-    do_operation mkdir -p "$CUSTOM_USER_CONFIG_DIR/zsh"
-    do_operation touch "$CUSTOM_USER_CONFIG_DIR/zsh/aliases"
-    do_operation touch "$CUSTOM_USER_CONFIG_DIR/zsh/env"
-    print_note "Added zsh user config files in '$CUSTOM_USER_CONFIG_DIR/zsh'."
+    create_user_file "zsh/aliases"
+    create_user_file "zsh/env"
 }
 
 function configure_neovim() {
