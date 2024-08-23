@@ -434,7 +434,7 @@ function install_sddm_config() {
 function parse_args() {
     local app_name="rave-de-installer"
     local flag_help flag_verbose flag_dryrun
-    local arg_mode=(user-config) # set a default
+    local arg_mode
     local usage=(
         "$app_name [-h|--help]"
         "$app_name [-v|--verbose] [-d|--dryrun] [-m|--mode <mode>]"
@@ -558,6 +558,12 @@ function admin_config() {
 function main() {
     assert_exists $INSTALLER_SRC_CONFIG_DIR
     parse_args "$@"
+
+    if [ -z "$SCRIPT_MODE" ]; then
+        read_prompt "Choose mode [user-config add-user admin-config]"
+        SCRIPT_MODE=$_prompt_result
+    fi
+     
     assert_not_empty "$SCRIPT_MODE"
     case "$SCRIPT_MODE" in
     'user-config')
