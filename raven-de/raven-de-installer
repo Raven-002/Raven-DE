@@ -504,7 +504,7 @@ function add_user() {
     if ! [ -z "$user_goups" ]; then
         groups_flag="--groups$user_goups"
     fi
-    do_operation useradd --create-home --shell "/bin/zsh" $groups_flag "$username"
+    do_operation useradd --create-home --shell "/bin/zsh" ${=groups_flag} "$username"
     yes_no_prompt "SetPassword?" && do_operation passwd "$username"
     yes_no_prompt "Configure User?" && do_operation sudo -Hu "$username" "$SCRIPTS_COMMAND" -m user-config
 }
