@@ -359,6 +359,8 @@ function configure_hypr() {
 
 function configure_qtile() {
     create_link_in_folder "$INSTALLER_SRC_CONFIG_DIR/qtile/config.py" "$USER_CONFIG_DIR/qtile"
+    create_link_in_folder "$INSTALLER_SRC_CONFIG_DIR/qtile/auto-start.sh" "$USER_CONFIG_DIR/qtile"
+    create_user_file "qtile/user-auto-start.sh"
     create_user_file "qtile/user_config.py"
     create_link_in_folder "$CUSTOM_USER_CONFIG_DIR/qtile/user_config.py" "$USER_CONFIG_DIR/qtile" -r
 

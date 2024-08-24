@@ -96,6 +96,7 @@ depends=(
     # Qtile
     xorg-xinit
     qtile
+    feh
 
     # Screenshots
     grim
