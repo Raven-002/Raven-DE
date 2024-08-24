@@ -264,7 +264,7 @@ function create_user_file() {
 
 
 # *** Functions ******************************************
-function create_default_user_asserts() {
+function create_default_user_assets() {
     create_user_file "images/lockscreen" "$INSTALLER_SRC_ASSETS_DIR/images/lock"
     create_user_file "images/background" "$INSTALLER_SRC_ASSETS_DIR/images/arch-black-4k.png"
     create_user_file "face" "$INSTALLER_SRC_ASSETS_DIR/images/user.png"
@@ -286,7 +286,7 @@ function create_default_user_asserts() {
 function create_user_directories() {
     do_operation xdg-user-dirs-update
     initialize_user_config_dir
-    create_default_user_asserts
+    create_default_user_assets
 }
 
 function configure_gtk_breeze_dark() {
@@ -352,10 +352,17 @@ function configure_hypr() {
     create_link_in_folder "$INSTALLER_SRC_CONFIG_DIR/hypr/hyprlock.conf" "$USER_CONFIG_DIR/hypr"
     create_link_in_folder "$INSTALLER_SRC_CONFIG_DIR/hypr/hyprpaper.conf" "$USER_CONFIG_DIR/hypr"
 
-    initialize_user_config_dir
     create_user_file "hypr/hyprland-user-programs.conf"
     create_user_file "hypr/hyprland-user-config.conf"
-    create_default_user_asserts
+    create_default_user_assets
+}
+
+function configure_qtile() {
+    create_link_in_folder "$INSTALLER_SRC_CONFIG_DIR/qtile/config.py" "$USER_CONFIG_DIR/qtile"
+    create_user_file "qtile/user_config.py"
+    create_link_in_folder "$CUSTOM_USER_CONFIG_DIR/qtile/user_config.py" "$USER_CONFIG_DIR/qtile" -r
+
+    create_default_user_assets
 }
 
 function configure_waybar() {
@@ -497,8 +504,9 @@ function user_config() {
         yes_no_prompt "Configure flatpak breeze dark?" && configure_flatpak_breeze_dark
         yes_no_prompt "Configure flatpak electron?" && configure_flatpak_electron
     fi
-    if yes_no_prompt "setup window manager?"; then
+    if yes_no_prompt "setup window managers?"; then
         yes_no_prompt "Configure hypr?" && configure_hypr
+        yes_no_prompt "Configure qtile?" && configure_qtile
         yes_no_prompt "Configure waybar?" && configure_waybar
         yes_no_prompt "Configure kitty?" && configure_kitty
         yes_no_prompt "Configure rofi?" && configure_rofi
