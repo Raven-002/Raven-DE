@@ -118,6 +118,7 @@ optdepends=(
     linux
     linux-firmware
     grub
+    grub-btrfs
     efibootmgr
     os-prober
     )
