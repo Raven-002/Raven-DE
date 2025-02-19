@@ -4,7 +4,7 @@
 # then please put 'unknown'.
 
 # Maintainer: Your Name <youremail@domain.com>
-pkgname=raven-de
+pkgname=raven-kde
 pkgver=@PKGVER@
 pkgrel=1
 epoch=
@@ -15,48 +15,64 @@ license=('GPL')
 groups=()
 depends=(
     # Base
-    base
     base-devel
+    posix
+    sudo
+    xdg-user-dirs
+    
+    # File systems
+    btrfs-progs
+    dosfstools
+    exfatprogs
+
+    # Communication
     networkmanager
     bluez
     bluez-utils
+    pipewire
+    pipewire-jack
+    pipewire-pulse
+    pavucontrol-qt
+    wireplumber
+
+    # Editors
     nano
     vi
     vim
     neovim
+
+    # basic
     git
     wget
     curl
-    zsh
-    sh
-    bash
-    libva-utils
-    pipewire-jack
-    pipewire-pulse
-    pavucontrol-qt
-    posix
-    sudo
-    btrfs-progs
     openssh
-    timeshift
-    xdg-user-dirs
-    
-    # Extra
     posix-c-development
     posix-software-development
     posix-user-portability
     posix-xsi
+    zip
+    unzip
+    
+    # Shells
+    zsh
+    sh
+    bash
 
+    # Graphics
+    libva-utils
+
+    # Backups
+    timeshift
+    
+    # Extra
+    strace
+    htop
+    neofetch
+    fastfetch
     ripgrep
     tree
     btop
-
-    kitty
     samba
-
-    flatpak
-
-    firefox
 
     # Fonts
     ttf-firacode-nerd
@@ -66,84 +82,36 @@ depends=(
     ttf-nerd-fonts-symbols-common
     ttf-nerd-fonts-symbols-mono
     ttf-font-awesome
-
     noto-fonts
     ttf-dejavu
-
-    # Hyprland
-    wayland
-    hyprland
-    swaync
-    pipewire
-    wireplumber
-    xdg-desktop-portal-gtk
-    xdg-desktop-portal-hyprland
-    archlinux-xdg-menu
-    polkit-gnome
-    qt5-wayland
-    qt6-wayland
-    waybar
-    hyprpaper
-    rofi-wayland
-    hypridle
-    hyprlock
-    hyprcursor
-    hyprwayland-scanner
-    cliphist
-    iio-sensor-proxy
-    xorg-xhost
-
-    # Screenshots
+    
+    # Wayland utilities
     grim
     slurp
-
-    # hyprpm deps
-    cmake
-    ninja
-    cpio
-    meson
-
-    inotify-tools
     
-    # Display Manager
-    sddm
+    # Extra GUI
+    kitty
+    flatpak
+    firefox
+    vlc
+    gparted
 
-    # Theming
-    qt5ct
-    qt6ct
-    breeze
-    breeze5
-    breeze-gtk
-    nwg-look
-
-    # Extra DE experience
-    network-manager-applet
-    blueman
-    gnome-keyring
-    libsecret
-    seahorse
+    # KDE
+    wayland
+    plasma-meta
+    kde-applications-meta
+    tesseract-data-eng # Dependency of kde
     )
 makedepends=()
 checkdepends=()
 optdepends=(
     # Base
+    base
     linux
     linux-firmware
     grub
     efibootmgr
-
-    # Intel
-    intel-ucode
-    mesa
-    vulkan-intel
-    intel-media-driver
-    libva-intel-driver
-    xf86-video-intel
-
-    # Nvidia
-    nvidia
-    nvidia-utils
-    nvidia-prime
+    os-prober
     )
 provides=('raven-de')
 conflicts=('raven-de')

@@ -264,80 +264,10 @@ function create_user_file() {
 
 
 # *** Functions ******************************************
-function create_default_user_asserts() {
-    create_user_file "images/lockscreen" "$INSTALLER_SRC_ASSETS_DIR/images/lock"
-    create_user_file "images/background" "$INSTALLER_SRC_ASSETS_DIR/images/arch-black-4k.png"
-    create_user_file "face" "$INSTALLER_SRC_ASSETS_DIR/images/user.png"
-
-    # Add execute permitions to all basedirs leading to the config dir.
-    _accumulated_path=""
-    for dir in $(tr '/' ' ' <<<"$CUSTOM_USER_CONFIG_DIR"); do
-        _accumulated_path="$_accumulated_path/$dir"
-        dir=$_accumulated_path
-        if [[ "$dir" == "/" || "$dir" == "/home" ]]; then
-            continue
-        fi
-        do_operation setfacl -m u:sddm:x $dir
-    done
-    do_operation setfacl -m u:sddm:r "$CUSTOM_USER_CONFIG_DIR/face"
-    create_link "$CUSTOM_USER_CONFIG_DIR/face" "$HOME/.face"
-}
-
 function create_user_directories() {
     do_operation xdg-user-dirs-update
     initialize_user_config_dir
     create_default_user_asserts
-}
-
-function configure_gtk_breeze_dark() {
-    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/gtk/gtk-3.0"
-    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/gtk/gtk-4.0"
-    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/gtk/gtkrc"
-    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/gtk/gtkrc-2.0"
-    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/xsettingsd"
-}
-
-function configure_qt_breeze_dark() {
-    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/qt/kdeglobals"
-    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/qt/qt5ct"
-    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/qt/qt6ct"
-    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/xsettingsd"
-}
-
-function install_breeze_dracula_cursor() {
-    _TMP_THEME_DIR="/tmp/dracula-cursor-build.tmp"
-    do_operation mkdir -p "$USER_HOME_DIR/.local/share/icons"
-    do_operation mkdir "$_TMP_THEME_DIR"
-
-    do_operation git clone https://github.com/dracula/gtk.git "$_TMP_THEME_DIR/dracula-gtk"
-    do_operation rm -rf "$USER_HOME_DIR/.local/share/icons/Breeze-Dracula"
-    do_operation cp -r "$_TMP_THEME_DIR/dracula-gtk/kde/cursors/Dracula-cursors" "$USER_HOME_DIR/.local/share/icons/Breeze-Dracula"
-
-    do_operation git clone https://github.com/guillaumeboehm/hyprcursor_dracula_kde.git "$_TMP_THEME_DIR/hyprcursor_dracula_kde"
-    do_operation hyprcursor-util --create "$_TMP_THEME_DIR/hyprcursor_dracula_kde" -o "$USER_HOME_DIR/.local/share/icons"
-
-    do_operation rm -rf "$_TMP_THEME_DIR"
-}
-
-function configure_flatpak_breeze_dark() {
-    do_operation flatpak override --user --filesystem=xdg-config/gtk-4.0:ro
-    do_operation flatpak override --user --filesystem=xdg-config/gtk-3.0:ro
-    do_operation flatpak override --user --filesystem=xdg-config/gtk-2.0:ro
-    do_operation flatpak override --user --filesystem=xdg-config/gtkrc-2.0:ro
-    do_operation flatpak override --user --filesystem=xdg-config/gtkrc:ro
-
-    do_operation flatpak override --user --filesystem=xdg-config/qt6ct:ro
-    do_operation flatpak override --user --filesystem=xdg-config/qt5ct:ro
-
-    # for gtk4 mostly
-    do_operation mkdir -p "$USER_HOME_DIR/.themes"
-    do_operation cp -r "/usr/share/themes/Breeze-Dark" "$USER_HOME_DIR/.themes"
-    do_operation flatpak override --user --filesystem=~/.themes:ro
-
-    do_operation flatpak override --user --env=GTK_THEME=Breeze-Dark
-    do_operation flatpak override --user --env=QT_QPA_PLATFORMTHEME=qt6ct
-    do_operation flatpak override --user --env=QT_QPA_PLATFORM=wayland
-    do_operation flatpak override --user --env=QT_STYLE_OVERRIDE=breeze
 }
 
 function configure_flatpak_electron() {
@@ -345,30 +275,9 @@ function configure_flatpak_electron() {
     do_operation flatpak override --user --socket=wayland
 }
 
-function configure_hypr() {
-    create_link_in_folder "$INSTALLER_SRC_CONFIG_DIR/hypr/hyprland.conf" "$USER_CONFIG_DIR/hypr"
-    create_link_in_folder "$INSTALLER_SRC_CONFIG_DIR/hypr/hyprland-config" "$USER_CONFIG_DIR/hypr"
-    create_link_in_folder "$INSTALLER_SRC_CONFIG_DIR/hypr/hypridle.conf" "$USER_CONFIG_DIR/hypr"
-    create_link_in_folder "$INSTALLER_SRC_CONFIG_DIR/hypr/hyprlock.conf" "$USER_CONFIG_DIR/hypr"
-    create_link_in_folder "$INSTALLER_SRC_CONFIG_DIR/hypr/hyprpaper.conf" "$USER_CONFIG_DIR/hypr"
-
-    initialize_user_config_dir
-    create_user_file "hypr/hyprland-user-programs.conf"
-    create_user_file "hypr/hyprland-user-config.conf"
-    create_default_user_asserts
-}
-
-function configure_waybar() {
-    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/waybar"
-}
-
 function configure_kitty() {
     link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/kitty"
     create_user_file "kitty/kitty.conf"
-}
-
-function configure_rofi() {
-    link_to_user_config "$INSTALLER_SRC_CONFIG_DIR/rofi"
 }
 
 function configure_zsh() {
@@ -424,19 +333,6 @@ function install_recommended_flatpaks() {
     yes_no_prompt "Install Flatseal(flatpak permissions manager)?" && flatpak install com.github.tchx84.Flatseal
     yes_no_prompt "Install Google Chrome?" && flatpak install com.google.Chrome
     yes_no_prompt "Install MissionCenter(task manager)?" && flatpak install io.missioncenter.MissionCenter
-    yes_no_prompt "Install Nautilus(file manager)?" && flatpak install org.gnome.Nautilus
-    yes_no_prompt "Install Remmina(rdp client)?" && flatpak install org.remmina.Remmina
-}
-
-function install_sddm_config() {
-    assert_is_root
-    for theme_dir in $(ls "$INSTALLER_SRC_SYSTEM_CONFIG_DIR/sddm-themes"); do
-        create_link_in_folder "$INSTALLER_SRC_SYSTEM_CONFIG_DIR/sddm-themes/$theme_dir" "/usr/share/sddm/themes"
-    done
-    for conf_file in $(ls "$INSTALLER_SRC_SYSTEM_CONFIG_DIR/sddm.conf.d"); do
-        create_link_in_folder "$INSTALLER_SRC_SYSTEM_CONFIG_DIR/sddm.conf.d/$conf_file" "/etc/sddm.conf.d"
-    done
-    do_operation systemctl enable sddm.service
 }
 
 # *** Main ***********************************************
@@ -490,19 +386,8 @@ function parse_args() {
 function user_config() {
     do_operation cd $USER_HOME_DIR
     yes_no_prompt "Create user directories?" && create_user_directories
-    if yes_no_prompt "Apply breeze dark?"; then
-        yes_no_prompt "Configure gtk breeze dark?" && configure_gtk_breeze_dark
-        yes_no_prompt "Configure qt breeze dark?" && configure_qt_breeze_dark
-        yes_no_prompt "Install breeze dracula cursor?" && install_breeze_dracula_cursor
-        yes_no_prompt "Configure flatpak breeze dark?" && configure_flatpak_breeze_dark
-        yes_no_prompt "Configure flatpak electron?" && configure_flatpak_electron
-    fi
-    if yes_no_prompt "setup window manager?"; then
-        yes_no_prompt "Configure hypr?" && configure_hypr
-        yes_no_prompt "Configure waybar?" && configure_waybar
-        yes_no_prompt "Configure kitty?" && configure_kitty
-        yes_no_prompt "Configure rofi?" && configure_rofi
-    fi
+    yes_no_prompt "Configure flatpak electron?" && configure_flatpak_electron
+    yes_no_prompt "Configure kitty?" && configure_kitty
     yes_no_prompt "Configure zsh?" && configure_zsh
     yes_no_prompt "Configure neovim?" && configure_neovim
     if ! is_yay_installed; then
@@ -560,8 +445,6 @@ function admin_config() {
             do_operation sed -i 's/# %wheel ALL=(ALL:ALL) NOPASSWD: ALL/%wheel ALL=(ALL:ALL) NOPASSWD :ALL/' "/etc/sudoers"
         fi
     fi
-
-    yes_no_prompt "Install sddm config?" && install_sddm_config
 }
 
 function main() {
