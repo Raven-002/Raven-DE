@@ -15,6 +15,9 @@ license=('GPL')
 groups=()
 depends=(
     # Base
+    man-db
+    man-pages
+    texinfo
     base-devel
     posix
     sudo
@@ -96,11 +99,16 @@ depends=(
     vlc
     gparted
 
+    # KDE Deps
+    qt6-multimedia-ffmpeg
+    noto-fonts-emoji
+    python-pyqt6
+    tesseract-data-eng
+
     # KDE
     wayland
     plasma-meta
     kde-applications-meta
-    tesseract-data-eng # Dependency of kde
     )
 makedepends=()
 checkdepends=()

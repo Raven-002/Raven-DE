@@ -430,12 +430,14 @@ function admin_config() {
         best_effort systemctl enable NetworkManager.service
         best_effort systemctl enable sshd.service
         best_effort systemctl enable sddm.service
+        best_effort systemctl enable man-db-timer.timer
     fi
 
     if yes_no_prompt "Start basic services?"; then
         best_effort systemctl start bluetooth.service
         best_effort systemctl start NetworkManager.service
         best_effort systemctl start sshd.service
+        best_effort systemctl start man-db-timer.timer
     fi
 
     if yes_no_prompt "Configure sudo for wheel group?"; then
