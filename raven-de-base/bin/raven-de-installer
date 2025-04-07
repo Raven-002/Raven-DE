@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """
-    @brief A management script for Raven DE.
-    @author Raven-002
+@brief A management script for Raven DE.
+@author Raven-002
 """
 
 # *** Imports ******************************************************************
+import inquirer
+
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Optional
@@ -18,11 +20,13 @@ class LogLevel(Enum):
     """
     Enum for log levels.
     """
+
     DEBUG = 1
     INFO = 2
     WARNING = 3
     ERROR = 4
     CRITICAL = 5
+
 
 class Logger(ABC):
     """
@@ -36,6 +40,20 @@ class Logger(ABC):
         :param message: The message to log.
         """
         pass
+
+
+class ConsoleLogger(Logger):
+    """
+    A logger that logs to the console.
+    """
+
+    def log(self, message: str, level: LogLevel = LogLevel.INFO):
+        """
+        Log a message to the console.
+        :param message: The message to log.
+        :param level: The log level.
+        """
+        print(f"[{level.name}] {message}")
 
 
 class CommandsRunner:
@@ -53,22 +71,163 @@ class CommandsRunner:
             return
         self._logger.log(message, level)
 
-    def run_command(self, command, args: Optional[list[str]] = None) -> None:
+    def run_command(
+        self, command, args: Optional[list[str]] = None, allow_error: bool = False
+    ) -> Optional[tuple[int, str, str]]:
         """
         Run a shell command.
         :param command: The command to run.
-        :return: The output of the command.
+        :param args: The arguments to pass to the command.
+        :param allow_error: Whether to allow errors.
+        :return: The return code, stdout, and stderr.
         """
         import subprocess
+
         self._log(f"Running command: {command}")
         if self._dry_run:
             self._log(f"Dry run mode.")
-            return
+            return None
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        if result.returncode != 0:
-            self._log(f"Command failed with error: {result.stderr.strip()}", LogLevel.WARNING)
-            raise Exception(f"Command failed: {result.stderr.strip()}")
-        return result.stdout.strip()
+        if result.stdout:
+            self._log(f"Command output: {result.stdout.strip()}", LogLevel.INFO)
+        if result.stderr:
+            self._log(f"Command error: {result.stderr.strip()}", LogLevel.WARNING)
+        if not allow_error and result.returncode != 0:
+            self._log(
+                f"Command failed with return value: {result.returncode}", LogLevel.ERROR
+            )
+            raise Exception(
+                f"Command failed: {result.returncode} {result.stderr.strip()}"
+            )
+        return result.returncode, result.stdout.strip(), result.stderr.strip()
+
+
+class ConfigurationObject(ABC):
+    """
+    Abstract class for configuration objects.
+    """
+
+    @property
+    @abstractmethod
+    def _logger(self) -> Logger:
+        """
+        Get the logger for the configuration object.
+        :return: The logger.
+        """
+        pass
+
+    @abstractmethod
+    @property
+    def name(self) -> str:
+        """
+        Get the name of the configuration object.
+        :return: The name of the configuration object.
+        """
+        pass
+
+    @abstractmethod
+    def get_state(self) -> str:
+        """
+        Get the configuration object's state.
+        :return: The configuration object's state as a string.
+        """
+        pass
+
+    def configure(self) -> None:
+        """
+        Configure the configuration object.
+        """
+        if self.check_if_configured():
+            self._logger.log(
+                f"Configuration object is already configured.", LogLevel.INFO
+            )
+            return
+
+        self._logger.log(f"Configuring configuration object.", LogLevel.INFO)
+        try:
+            self._configure()
+            self._logger.log(
+                f"Configuration object configured successfully.", LogLevel.INFO
+            )
+        except Exception as e:
+            self._logger.log(
+                f"Configuration object configuration failed: {e}", LogLevel.ERROR
+            )
+            raise
+
+        self._logger.log(
+            f"Validating configuration object.", LogLevel.INFO
+        )
+        try:
+            self.validate()
+            self._logger.log(
+                f"Configuration object validation successful.", LogLevel.INFO
+            )
+        except Exception as e:
+            self._logger.log(
+                f"Configuration object validation failed: {e}", LogLevel.ERROR
+            )
+            raise
+
+        self._logger.log(
+            f"Configuration object state: {self.get_state()}", LogLevel.INFO
+        )
+
+
+    @abstractmethod
+    def _configure(self) -> None:
+        """
+        Configure the configuration object.
+        """
+        pass
+
+    @abstractmethod
+    def validate(self) -> None:
+        """
+        Validate the configuration object.
+        """
+        pass
+
+    @abstractmethod
+    def check_if_configured(self) -> bool:
+        """
+        Check if the configuration object is configured.
+        :return: True if configured, False otherwise.
+        """
+        pass
+
+    def unconfigure(self) -> None:
+        """
+        Unconfigure the configuration object.
+        """
+        if not self.check_if_configured():
+            self._logger.log(
+                f"Configuration object is not configured.", LogLevel.INFO
+            )
+            return
+
+        self._logger.log(f"Unconfiguring configuration object.", LogLevel.INFO)
+        try:
+            self._unconfigure()
+            self._logger.log(
+                f"Configuration object unconfigured successfully.", LogLevel.INFO
+            )
+        except Exception as e:
+            self._logger.log(
+                f"Configuration object unconfiguration failed: {e}", LogLevel.ERROR
+            )
+            raise
+
+        self._logger.log(
+            f"Configuration object state: {self.get_state()}", LogLevel.INFO
+        )
+
+    @abstractmethod
+    def _unconfigure(self) -> None:
+        """
+        Unconfigure the configuration object.
+        """
+        pass
 
 
 # *** Functions ****************************************************************
