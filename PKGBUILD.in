@@ -15,46 +15,18 @@ license=('GPL')
 groups=()
 depends=(
     # Base
-    man-db
-    man-pages
-    texinfo
-    base-devel
-    posix
-    sudo
-    xdg-user-dirs
     
     # File systems
-    btrfs-progs
-    dosfstools
-    exfatprogs
 
     # Communication
-    networkmanager
-    bluez
-    bluez-utils
-    pipewire
-    pipewire-jack
-    pipewire-pulse
-    pavucontrol-qt
-    wireplumber
 
     # Editors
-    nano
-    vi
-    vim
     neovim
 
     # basic
     git
     wget
     curl
-    openssh
-    posix-c-development
-    posix-software-development
-    posix-user-portability
-    posix-xsi
-    zip
-    unzip
     
     # Shells
     zsh
@@ -62,65 +34,26 @@ depends=(
     bash
 
     # Graphics
-    libva-utils
 
     # Backups
-    timeshift
     
     # Extra
-    strace
-    htop
-    neofetch
-    fastfetch
-    ripgrep
-    tree
-    btop
-    samba
 
     # Fonts
-    ttf-firacode-nerd
-    ttf-iosevka-nerd
-    ttf-noto-nerd
-    ttf-nerd-fonts-symbols
-    ttf-nerd-fonts-symbols-common
-    ttf-nerd-fonts-symbols-mono
-    ttf-font-awesome
-    noto-fonts
-    ttf-dejavu
     
     # Wayland utilities
-    grim
-    slurp
     
     # Extra GUI
     kitty
-    flatpak
-    firefox
-    vlc
-    gparted
 
     # KDE Deps
-    qt6-multimedia-ffmpeg
-    noto-fonts-emoji
-    python-pyqt6
-    tesseract-data-eng
 
     # KDE
-    wayland
-    plasma-meta
-    kde-applications-meta
     )
 makedepends=()
 checkdepends=()
 optdepends=(
     # Base
-    base
-    linux
-    linux-firmware
-    grub
-    grub-btrfs
-    efibootmgr
-    os-prober
     )
 provides=('raven-de')
 conflicts=('raven-de')

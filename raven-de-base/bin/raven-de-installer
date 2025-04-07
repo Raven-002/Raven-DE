@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+"""
+    @brief A management script for Raven DE.
+    @author Raven-002
+"""
+
+# *** Imports ******************************************************************
+from abc import ABC, abstractmethod
+from enum import Enum
+from typing import Optional
+
+
+# *** Constants ****************************************************************
+
+
+# *** Objects ******************************************************************
+class LogLevel(Enum):
+    """
+    Enum for log levels.
+    """
+    DEBUG = 1
+    INFO = 2
+    WARNING = 3
+    ERROR = 4
+    CRITICAL = 5
+
+class Logger(ABC):
+    """
+    A basic logger api.
+    """
+
+    @abstractmethod
+    def log(self, message: str, level: LogLevel = LogLevel.INFO):
+        """
+        Log a message.
+        :param message: The message to log.
+        """
+        pass
+
+
+class CommandsRunner:
+    """
+    Class to run commands in the shell.
+    """
+
+    def __init__(self, dry_run: bool, logger: Optional[Logger]):
+        self._dry_run: bool = dry_run
+        self._logger: Optional[Logger] = logger
+        pass
+
+    def _log(self, message: str, level: LogLevel = LogLevel.INFO) -> None:
+        if not self._logger:
+            return
+        self._logger.log(message, level)
+
+    def run_command(self, command, args: Optional[list[str]] = None) -> None:
+        """
+        Run a shell command.
+        :param command: The command to run.
+        :return: The output of the command.
+        """
+        import subprocess
+        self._log(f"Running command: {command}")
+        if self._dry_run:
+            self._log(f"Dry run mode.")
+            return
+        result = subprocess.run(command, shell=True, capture_output=True, text=True)
+        if result.returncode != 0:
+            self._log(f"Command failed with error: {result.stderr.strip()}", LogLevel.WARNING)
+            raise Exception(f"Command failed: {result.stderr.strip()}")
+        return result.stdout.strip()
+
+
+# *** Functions ****************************************************************
+
+
+# *** Main *********************************************************************
+def main():
+    """
+    Main function to run the Raven DE installer.
+    """
+    print("Raven DE Installer")
+    print("This script is a placeholder for the Raven DE installation process.")
+    print("Please refer to the official documentation for installation instructions.")
+
+
+if __name__ == "__main__":
+    main()
