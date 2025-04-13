@@ -6,10 +6,11 @@
 
 # *** Imports ******************************************************************
 import inquirer
+import os
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Optional
+from typing import Optional, override
 
 
 # *** Constants ****************************************************************
@@ -33,11 +34,82 @@ class Logger(ABC):
     A basic logger api.
     """
 
-    @abstractmethod
+    def __init__(self):
+        """
+        Initialize the logger.
+        """
+        self._context_stack: list[str] = []
+
+    def push_context(self, context: str):
+        """
+        Push a context to the stack.
+        :param context: The context to push.
+        """
+        self._context_stack.append(context)
+    
+    def pop_context(self):
+        """
+        Pop a context from the stack.
+        """
+        self._context_stack.pop()
+
     def log(self, message: str, level: LogLevel = LogLevel.INFO):
         """
         Log a message.
         :param message: The message to log.
+        """
+        context = "".join([f"[{c}]" for c in self._context_stack])
+        self._log(message, level)
+
+    @abstractmethod
+    def _log(self, message: str, level: LogLevel):
+        """
+        Log a message.
+        :param message: The message to log.
+        :param level: The log level.
+        """
+        pass
+
+
+def add_context(func):
+    """
+    Decorator to add context to a function.
+    :param func: The function to decorate.
+    :return: The decorated function.
+    """
+
+    def wrapper(self, *args, **kwargs):
+        assert isinstance(self._logger, Logger), "obj must have _logger"
+        assert isinstance(self._logger_context, str), "obj must have _logger_context"
+        self._logger.push_context(self._logger_context)
+        try:
+            return func(self, *args, **kwargs)
+        finally:
+            self._logger.pop_context()
+
+    return wrapper
+
+
+
+
+
+class NullLogger(Logger):
+    """
+    A logger that does nothing.
+    """
+
+    def __init__(self):
+        """
+        Initialize the null logger.
+        """
+        super().__init__()
+
+    @override
+    def _log(self, message: str, level: LogLevel):
+        """
+        Do nothing.
+        :param message: The message to log.
+        :param level: The log level.
         """
         pass
 
@@ -47,7 +119,14 @@ class ConsoleLogger(Logger):
     A logger that logs to the console.
     """
 
-    def log(self, message: str, level: LogLevel = LogLevel.INFO):
+    def __init__(self):
+        """
+        Initialize the console logger.
+        """
+        super().__init__()
+
+    @override
+    def _log(self, message: str, level: LogLevel):
         """
         Log a message to the console.
         :param message: The message to log.
@@ -61,16 +140,20 @@ class CommandsRunner:
     Class to run commands in the shell.
     """
 
-    def __init__(self, dry_run: bool, logger: Optional[Logger]):
+    def __init__(self, dry_run: bool, logger: Logger):
         self._dry_run: bool = dry_run
-        self._logger: Optional[Logger] = logger
+        self.__logger: Logger = logger
         pass
 
-    def _log(self, message: str, level: LogLevel = LogLevel.INFO) -> None:
-        if not self._logger:
-            return
-        self._logger.log(message, level)
+    @property
+    def _logger(self) -> Logger:
+        """
+        Get the logger.
+        :return: The logger.
+        """
+        return self.__logger
 
+    @add_context("CommandsRunner")
     def run_command(
         self, command, args: Optional[list[str]] = None, allow_error: bool = False
     ) -> Optional[tuple[int, str, str]]:
@@ -83,17 +166,19 @@ class CommandsRunner:
         """
         import subprocess
 
-        self._log(f"Running command: {command}")
+        self._logger.log(f"Running command: {command}")
         if self._dry_run:
-            self._log(f"Dry run mode.")
+            self._logger.log(f"Dry run mode.")
             return None
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
         if result.stdout:
-            self._log(f"Command output: {result.stdout.strip()}", LogLevel.INFO)
+            self._logger.log(f"Command output: {result.stdout.strip()}", LogLevel.INFO)
         if result.stderr:
-            self._log(f"Command error: {result.stderr.strip()}", LogLevel.WARNING)
+            self._logger.log(
+                f"Command error: {result.stderr.strip()}", LogLevel.WARNING
+            )
         if not allow_error and result.returncode != 0:
-            self._log(
+            self._logger.log(
                 f"Command failed with return value: {result.returncode}", LogLevel.ERROR
             )
             raise Exception(
@@ -102,22 +187,282 @@ class CommandsRunner:
         return result.returncode, result.stdout.strip(), result.stderr.strip()
 
 
+class FileSystemController:
+    """
+    Class to control the file system.
+    """
+
+    def __init__(self, dry_run: bool, logger: Logger):
+        self._dry_run: bool = dry_run
+        self.__logger: Logger = logger
+        pass
+
+    @property
+    def _logger(self) -> Logger:
+        """
+        Get the logger.
+        :return: The logger.
+        """
+        return self.__logger
+
+    def create_directory(self, path: str) -> None:
+        """
+        Create a directory.
+        :param path: The path to create.
+        """
+        self._logger.log(f"Creating directory: {path}")
+        if self._dry_run:
+            self._logger.log(f"Dry run mode.")
+            return
+
+        try:
+            os.makedirs(path, exist_ok=True)
+            self._logger.log(f"Directory created: {path}", LogLevel.INFO)
+        except Exception as e:
+            self._logger.log(f"Failed to create directory: {e}", LogLevel.ERROR)
+            raise
+
+    def remove_directory(self, path: str) -> None:
+        """
+        Remove a directory.
+        :param path: The path to remove.
+        """
+        self._logger.log(f"Removing directory: {path}")
+        if self._dry_run:
+            self._logger.log(f"Dry run mode.")
+            return
+
+        try:
+            os.rmdir(path)
+            self._logger.log(f"Directory removed: {path}", LogLevel.INFO)
+        except Exception as e:
+            self._logger.log(f"Failed to remove directory: {e}", LogLevel.ERROR)
+            raise
+
+    def exists(self, path: str) -> bool:
+        """
+        Check if a file exists.
+        :param path: The path to check.
+        :return: True if the file exists, False otherwise.
+        """
+        self._logger.log(f"Checking if file exists: {path}")
+        exists = os.path.exists(path)
+        self._logger.log(f"File exists: {exists}", LogLevel.INFO)
+        return exists
+
+    def is_directory(self, path: str) -> bool:
+        """
+        Check if a path is a directory.
+        :param path: The path to check.
+        :return: True if the path is a directory, False otherwise.
+        """
+        self._logger.log(f"Checking if path is a directory: {path}")
+        is_dir = os.path.isdir(path)
+        self._logger.log(f"Path is a directory: {is_dir}", LogLevel.INFO)
+        return is_dir
+
+    def is_file(self, path: str) -> bool:
+        """
+        Check if a path is a file.
+        :param path: The path to check.
+        :return: True if the path is a file, False otherwise.
+        """
+        self._logger.log(f"Checking if path is a file: {path}")
+        is_file = os.path.isfile(path)
+        self._logger.log(f"Path is a file: {is_file}", LogLevel.INFO)
+        return is_file
+
+    def assert_exists(self, path: str, message: Optional[str] = None) -> None:
+        """
+        Assert that a path exists.
+        :param path: The path to check.
+        """
+        self._logger.log(f"Asserting path exists: {path}")
+        if self._dry_run:
+            self._logger.log(f"Dry run mode.")
+            return
+
+        if not self.exists(path):
+            error_message = message or f"Path not found: {path}"
+            raise FileNotFoundError(error_message)
+
+    def assert_file_exists(self, path: str, message: Optional[str] = None) -> None:
+        """
+        Assert that a file exists.
+        :param path: The path to check.
+        """
+        self._logger.log(f"Asserting file exists: {path}")
+        if self._dry_run:
+            self._logger.log(f"Dry run mode.")
+            return
+
+        if not self.is_file(path):
+            error_message = message or f"File not found: {path}"
+            raise FileNotFoundError(error_message)
+
+    def assert_directory_exists(self, path: str, message: Optional[str] = None) -> None:
+        """
+        Assert that a directory exists.
+        :param path: The path to check.
+        """
+        self._logger.log(f"Asserting directory exists: {path}")
+        if self._dry_run:
+            self._logger.log(f"Dry run mode.")
+            return
+
+        if not self.is_directory(path):
+            error_message = message or f"Directory not found: {path}"
+            raise NotADirectoryError(error_message)
+
+    def assert_symlink(self, path: str) -> None:
+        """
+        Assert that a path is a symbolic link.
+        :param path: The path to check.
+        """
+        self._logger.log(f"Asserting symlink: {path}")
+        if self._dry_run:
+            self._logger.log(f"Dry run mode.")
+            return
+
+        if not self.is_symlink(path):
+            raise FileNotFoundError(f"Symlink not found: {path}")
+
+    def assert_not_exists(self, path: str) -> None:
+        """
+        Assert that a path does not exist.
+        :param path: The path to check.
+        """
+        self._logger.log(f"Asserting path does not exist: {path}")
+        if self._dry_run:
+            self._logger.log(f"Dry run mode.")
+            return
+
+        if self.exists(path):
+            raise FileExistsError(f"Path exists: {path}")
+
+    def remove_file(self, path: str) -> None:
+        """
+        Remove a file.
+        :param path: The path to remove.
+        """
+        self._logger.log(f"Removing file: {path}")
+        if self._dry_run:
+            self._logger.log(f"Dry run mode.")
+            return
+
+        try:
+            os.remove(path)
+            self._logger.log(f"File removed: {path}", LogLevel.INFO)
+        except Exception as e:
+            self._logger.log(f"Failed to remove file: {e}", LogLevel.ERROR)
+            raise
+
+    def create_symlink(self, target: str, link_name: str) -> None:
+        """
+        Create a symbolic link.
+        :param target: The target file.
+        :param link_name: The name of the symbolic link.
+        """
+        self._logger.log(f"Creating symbolic link: {link_name} -> {target}")
+        if self._dry_run:
+            self._logger.log(f"Dry run mode.")
+            return
+
+        try:
+            os.symlink(target, link_name)
+            self._logger.log(
+                f"Symbolic link created: {link_name} -> {target}", LogLevel.INFO
+            )
+        except Exception as e:
+            self._logger.log(f"Failed to create symbolic link: {e}", LogLevel.ERROR)
+            raise
+
+    def is_symlink(self, path: str) -> bool:
+        """
+        Check if a path is a symbolic link.
+        :param path: The path to check.
+        :return: True if the path is a symbolic link, False otherwise.
+        """
+        self._logger.log(f"Checking if path is a symbolic link: {path}")
+        if self._dry_run:
+            self._logger.log(f"Dry run mode.")
+            return False
+
+        is_link = os.path.islink(path)
+        self._logger.log(f"Path is a symbolic link: {is_link}", LogLevel.INFO)
+        return is_link
+
+    def copy_file(self, source: str, destination: str) -> None:
+        """
+        Copy a file.
+        :param source: The source file.
+        :param destination: The destination file.
+        """
+        self._logger.log(f"Copying file: {source} -> {destination}")
+        if self._dry_run:
+            self._logger.log(f"Dry run mode.")
+            return
+
+        try:
+            with open(source, "rb") as src_file:
+                with open(destination, "wb") as dest_file:
+                    dest_file.write(src_file.read())
+            self._logger.log(f"File copied: {source} -> {destination}", LogLevel.INFO)
+        except Exception as e:
+            self._logger.log(f"Failed to copy file: {e}", LogLevel.ERROR)
+            raise
+
+    def expanduser(self, path: str) -> str:
+        """
+        Expand the user directory in a path.
+        :param path: The path to expand.
+        :return: The expanded path.
+        """
+        return os.path.expanduser(path)
+
+    def get_home_directory(self) -> str:
+        """
+        Get the home directory.
+        :return: The home directory.
+        """
+        return os.path.expanduser("~")
+
+    def join(self, *paths: str) -> str:
+        """
+        Join paths.
+        :param paths: The paths to join.
+        :return: The joined path.
+        """
+        return os.path.join(*paths)
+
+
 class ConfigurationObject(ABC):
     """
     Abstract class for configuration objects.
     """
 
+    def __init__(self, logger: Logger = None):
+        self.__logger: Logger = logger
+
     @property
-    @abstractmethod
     def _logger(self) -> Logger:
         """
-        Get the logger for the configuration object.
+        Get the logger.
         :return: The logger.
+        """
+        return self.__logger
+
+    @property
+    @abstractmethod
+    def dependencies(self) -> list["ConfigurationObject"]:
+        """
+        Get the dependencies of the configuration object.
+        :return: The dependencies of the configuration object.
         """
         pass
 
-    @abstractmethod
     @property
+    @abstractmethod
     def name(self) -> str:
         """
         Get the name of the configuration object.
@@ -155,9 +500,7 @@ class ConfigurationObject(ABC):
             )
             raise
 
-        self._logger.log(
-            f"Validating configuration object.", LogLevel.INFO
-        )
+        self._logger.log(f"Validating configuration object.", LogLevel.INFO)
         try:
             self.validate()
             self._logger.log(
@@ -172,7 +515,6 @@ class ConfigurationObject(ABC):
         self._logger.log(
             f"Configuration object state: {self.get_state()}", LogLevel.INFO
         )
-
 
     @abstractmethod
     def _configure(self) -> None:
@@ -201,9 +543,7 @@ class ConfigurationObject(ABC):
         Unconfigure the configuration object.
         """
         if not self.check_if_configured():
-            self._logger.log(
-                f"Configuration object is not configured.", LogLevel.INFO
-            )
+            self._logger.log(f"Configuration object is not configured.", LogLevel.INFO)
             return
 
         self._logger.log(f"Unconfiguring configuration object.", LogLevel.INFO)
@@ -230,7 +570,84 @@ class ConfigurationObject(ABC):
         pass
 
 
-# *** Functions ****************************************************************
+# *** Concrete Configuration Objects *******************************************
+class UserDirectoryConfiguration(ConfigurationObject):
+    def __init__(
+        self,
+        logger: Logger,
+        commands_runner: CommandsRunner,
+        file_system_controller: FileSystemController,
+        configuration_path: str,
+    ):
+        """
+        Initialize the UserDirectoryConfiguration object.
+        :param logger: The logger.
+        :param file_system_controller: The file system controller.
+        """
+        super().__init__(logger)
+        self._commands_runner: CommandsRunner = commands_runner
+        self._file_system_controller: FileSystemController = file_system_controller
+        self._user_directory: str = file_system_controller.expanduser(
+            configuration_path
+        )
+
+    @property
+    @override
+    def dependencies(self) -> list[ConfigurationObject]:
+        return []
+
+    @property
+    @override
+    def name(self) -> str:
+        return "User Directory Configuration"
+
+    @property
+    @override
+    def user_directory(self) -> str:
+        return self._user_directory
+
+    @property
+    def _git_directory(self) -> str:
+        return self._file_system_controller.join(self.user_directory, ".git")
+
+    @override
+    def get_state(self) -> str:
+        try:
+            if self.check_if_configured():
+                return "Not Configured"
+            self.validate()
+            return "Configured"
+        except Exception as e:
+            return f"Not Configured correctly: {str(e)}"
+
+    @override
+    def _configure(self) -> None:
+        self._file_system_controller.create_directory(self.user_directory)
+        self._commands_runner.run_command("git init", [self.user_directory])
+
+    @override
+    def validate(self) -> None:
+        self._file_system_controller.assert_directory_exists(
+            self.user_directory,
+            f"User directory {self.user_directory} does not exist.",
+        )
+        self._file_system_controller.assert_directory_exists(
+            self._git_directory,
+            f"User directory {self.user_directory} is not a git repository.",
+        )
+
+    @override
+    def check_if_configured(self) -> bool:
+        if not self._file_system_controller.exists(self.user_directory):
+            return False
+        if not self._file_system_controller.is_directory(self.user_directory):
+            raise Exception(
+                f"User directory {self.user_directory} exists but is not a directory. Consider removing it."
+            )
+
+    @override
+    def _unconfigure(self) -> None:
+        self._file_system_controller.remove_directory(self.user_directory)
 
 
 # *** Main *********************************************************************
@@ -239,6 +656,22 @@ def main():
     Main function to run the Raven DE installer.
     """
     print("Raven DE Installer")
+    logger = ConsoleLogger()
+    commands_runner = CommandsRunner(dry_run=True, logger=logger)
+    file_system_controller = FileSystemController(dry_run=True, logger=logger)
+    user_directory = os.path.join(
+        file_system_controller.get_home_directory(), ".raven-de"
+    )
+    user_directory_config = UserDirectoryConfiguration(
+        logger=logger,
+        commands_runner=commands_runner,
+        file_system_controller=file_system_controller,
+        configuration_path=user_directory,
+    )
+    user_directory_config.configure()
+    user_directory_config.validate()
+    user_directory_config.unconfigure()
+
     print("This script is a placeholder for the Raven DE installation process.")
     print("Please refer to the official documentation for installation instructions.")
 
