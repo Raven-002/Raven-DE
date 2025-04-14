@@ -6,6 +6,7 @@
 
 # *** Imports ******************************************************************
 import inquirer
+import inquirer.themes
 import os
 import logging
 import sys
@@ -13,7 +14,7 @@ import inspect
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Optional, override
+from typing import Any, Optional, override
 from colorlog import ColoredFormatter
 
 
@@ -350,6 +351,24 @@ class PromptManager:
     def __init__(self):
         pass
 
+    def _prompt(self, questions: list[Any]) -> dict[str, str]:
+        """
+        Prompt the user for input.
+        :param questions: The questions to ask.
+        :return: The user's answers.
+        """
+        answers = inquirer.prompt(questions, theme=inquirer.themes.Default())
+        if not answers:
+            raise Exception("No answer provided.")
+        return answers
+
+    def display_message(self, message: str) -> None:
+        """
+        Display a message to the user.
+        :param message: The message to display.
+        """
+        print(message)
+
     def prompt(self, message: str, default: Optional[str] = None) -> str:
         """
         Prompt the user for input.
@@ -360,7 +379,7 @@ class PromptManager:
         questions = [
             inquirer.Text("value", message=message, default=default),
         ]
-        answers = inquirer.prompt(questions)
+        answers = self._prompt(questions)
         return answers["value"]
 
     def prompt_yes_no(self, message: str, default: Optional[bool] = None) -> bool:
@@ -373,7 +392,7 @@ class PromptManager:
         questions = [
             inquirer.Confirm("value", message=message, default=default),
         ]
-        answers = inquirer.prompt(questions)
+        answers = self._prompt(questions)
         return answers["value"]
 
     def prompt_password(self, message: str) -> str:
@@ -385,7 +404,7 @@ class PromptManager:
         questions = [
             inquirer.Password("value", message=message),
         ]
-        answers = inquirer.prompt(questions)
+        answers = self._prompt(questions)
         return answers["value"]
 
     def prompt_select(
@@ -401,8 +420,34 @@ class PromptManager:
         questions = [
             inquirer.List("value", message=message, choices=choices, default=default),
         ]
-        answers = inquirer.prompt(questions)
+        answers = self._prompt(questions)
         return answers["value"]
+
+    def prompt_checkbox(
+        self,
+        message: str,
+        choices: list[str],
+        default: Optional[list[str]] = None,
+        allow_empty: bool = False,
+    ) -> list[str]:
+        """
+        Prompt the user to select multiple choices.
+        :param message: The message to display.
+        :param choices: The list of choices.
+        :param default: The default values.
+        :return: The user's selections.
+        """
+        questions = [
+            inquirer.Checkbox(
+                "value", message=message, choices=choices, default=default
+            ),
+        ]
+        answers = self._prompt(questions)
+        answer = answers["value"]
+        assert isinstance(answer, list), "Answer is not a list."
+        if len(answer) == 0 and not allow_empty:
+            raise Exception("No answer provided.")
+        return answer
 
 
 class ConfigurationObject(ABC):
@@ -776,43 +821,143 @@ def setup_logging(
         logger.addHandler(file_handler)
 
 
+def get_configuration_objects(
+    prompt_manager: PromptManager,
+    file_system_controller: FileSystemController,
+    commands_runner: CommandsRunner,
+) -> list[ConfigurationObject]:
+    """
+    Get the list of configuration objects.
+    :return: The list of configuration objects.
+    """
+    configurations: list[ConfigurationObject] = []
+
+    user_git_configuration = UserGitConfiguration(
+        prompt_manager=prompt_manager, commands_runner=commands_runner
+    )
+    configurations.append(user_git_configuration)
+
+    user_directory = os.path.join(
+        file_system_controller.get_home_directory(), ".config", "raven-de"
+    )
+    user_directory_configuration = UserDirectoryConfiguration(
+        commands_runner=commands_runner,
+        file_system_controller=file_system_controller,
+        configuration_path=user_directory,
+        git_configuration=user_git_configuration,
+    )
+    configurations.append(user_directory_configuration)
+
+    return configurations
+
+
+def select_configuration_objects(
+    configurations: list[ConfigurationObject],
+    prompt_manager: PromptManager,
+) -> list[ConfigurationObject]:
+    """
+    Select configuration objects to configure.
+    :param configurations: The list of configuration objects.
+    :return: The selected configuration objects.
+    """
+    choices = [config.name for config in configurations]
+    selected_choices = prompt_manager.prompt_checkbox(
+        message="Select configurations to run", choices=choices, allow_empty=False
+    )
+
+    selected_configurations = [
+        config for config in configurations if config.name in selected_choices
+    ]
+    return selected_configurations
+
+
+def get_dependencies(
+    configurations: list[ConfigurationObject],
+) -> list[ConfigurationObject]:
+    """
+    Get the dependencies of the selected configuration objects, while checking for cycles.
+    :param configurations: The list of configuration objects.
+    :return: The list of dependencies.
+    """
+    visited: set[ConfigurationObject] = set()
+    stack: set[ConfigurationObject] = set()
+    cycles: list[list[ConfigurationObject]] = []
+
+    logger.debug("Resolving dependencies...")
+
+    def visit(obj: ConfigurationObject):
+        if obj in stack:
+            cycles.append(list(stack))
+            return
+        if obj in visited:
+            return
+        visited.add(obj)
+        stack.add(obj)
+        for dep in obj.dependencies:
+            visit(dep)
+        stack.remove(obj)
+
+    for obj in configurations:
+        visit(obj)
+
+    if cycles:
+        logger.error("Cycles detected in dependencies:")
+        for cycle in cycles:
+            logger.error(f" - Cycle: {[obj.name for obj in cycle]}")
+        raise Exception("Cycles detected in dependencies.")
+
+    logger.debug("Dependencies resolved successfully.")
+
+    return visited
+
+
 # *** Main *********************************************************************
 def main():
     """
     Main function to run the Raven DE installer.
     """
     setup_logging(logging.DEBUG, logging.INFO)
-    logger.info("Raven DE Installer")
     logger.info("Starting Raven DE installer.")
-    logger.info("Running in dry run mode.")
 
     global is_dry_run
     is_dry_run = True
+    logger.info("Running in dry run mode.")
 
     prompt_manager = PromptManager()
     commands_runner = CommandsRunner()
-    hello = commands_runner.run_command(
-        "echo", args=["Hello, World!"], ignore_dry_run=True
-    )
-    logger.info(hello)
     file_system_controller = FileSystemController()
-    user_directory = os.path.join(
-        file_system_controller.get_home_directory(), ".raven-de"
+
+    configurations = get_configuration_objects(
+        prompt_manager, file_system_controller, commands_runner
     )
-    git_configuration = UserGitConfiguration(prompt_manager, commands_runner)
-    user_directory_config = UserDirectoryConfiguration(
-        commands_runner=commands_runner,
-        file_system_controller=file_system_controller,
-        configuration_path=user_directory,
-        git_configuration=git_configuration,
+    logger.info("Loaded configuration objects:")
+    for config in configurations:
+        logger.info(f" - {config.name}")
+
+    selected_configurations = select_configuration_objects(
+        configurations, prompt_manager
     )
-    git_configuration.configure(override=True)
-    git_configuration.validate()
-    logger.info(f"Git configuration state: {git_configuration.get_state()}")
-    user_directory_config.configure()
-    user_directory_config.validate()
-    logger.info(f"User configuration state: {user_directory_config.get_state()}")
-    user_directory_config.unconfigure()
+    logger.info("Selected configuration objects:")
+    for config in selected_configurations:
+        logger.info(f" - {config.name}")
+
+    dependencies = get_dependencies(selected_configurations)
+    logger.info("Resolved dependencies:")
+    for config in dependencies:
+        logger.info(f" - {config.name}")
+
+    prompt_manager.display_message(
+        "The following configurations will be run:\n"
+        + "\n".join([f" - {config.name}" for config in dependencies])
+        + "\n"
+    )
+    if not prompt_manager.prompt_yes_no(
+        "Do you want to continue?",
+        default=True,
+    ):
+        logger.info("Installation cancelled by user.")
+        return
+    logger.info("Continuing with the installation.")
 
 
 if __name__ == "__main__":
