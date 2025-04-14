@@ -19,6 +19,7 @@ from colorlog import ColoredFormatter
 
 # *** Globals ******************************************************************
 logger = logging.getLogger()
+is_dry_run: bool = True
 
 
 # *** Constants ****************************************************************
@@ -58,12 +59,19 @@ class CommandsRunner:
     Class to run commands in the shell.
     """
 
-    def __init__(self, dry_run: bool):
-        self._dry_run: bool = dry_run
+    RETURN_INDEX_STATUS = 0
+    RETURN_INDEX_STDOUT = 1
+    RETURN_INDEX_STDERR = 2
+
+    def __init__(self):
         pass
 
     def run_command(
-        self, command, args: Optional[list[str]] = None, allow_error: bool = False
+        self,
+        command,
+        args: Optional[list[str]] = None,
+        allow_error: bool = False,
+        ignore_dry_run: bool = False,
     ) -> Optional[tuple[int, str, str]]:
         """
         Run a shell command.
@@ -74,11 +82,14 @@ class CommandsRunner:
         """
         import subprocess
 
-        logger.info(f"Running command: {command}")
-        if self._dry_run:
+        logger.info(f'Running command: "{command}" with args: {args}')
+        if is_dry_run and not ignore_dry_run:
             logger.debug(f"Dry run mode.")
             return None
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
+        command_args = [command] + args if args else [command]
+        result = subprocess.run(
+            command_args, shell=False, capture_output=True, text=True
+        )
         if result.stdout:
             logger.debug(f"Command output: {result.stdout.strip()}")
         if result.stderr:
@@ -96,8 +107,7 @@ class FileSystemController:
     Class to control the file system.
     """
 
-    def __init__(self, dry_run: bool):
-        self._dry_run: bool = dry_run
+    def __init__(self):
         pass
 
     def create_directory(self, path: str) -> None:
@@ -106,7 +116,7 @@ class FileSystemController:
         :param path: The path to create.
         """
         logger.info(f"Creating directory: {path}")
-        if self._dry_run:
+        if is_dry_run:
             logger.debug(f"Dry run mode.")
             return
 
@@ -123,7 +133,7 @@ class FileSystemController:
         :param path: The path to remove.
         """
         logger.info(f"Removing directory: {path}")
-        if self._dry_run:
+        if is_dry_run:
             logger.debug(f"Dry run mode.")
             return
 
@@ -176,7 +186,7 @@ class FileSystemController:
         :param path: The path to check.
         """
         logger.debug(f"Asserting path exists: {path}")
-        if self._dry_run:
+        if is_dry_run:
             logger.debug(f"Dry run mode.")
             return
 
@@ -190,7 +200,7 @@ class FileSystemController:
         :param path: The path to check.
         """
         logger.debug(f"Asserting file exists: {path}")
-        if self._dry_run:
+        if is_dry_run:
             logger.debug(f"Dry run mode.")
             return
 
@@ -204,7 +214,7 @@ class FileSystemController:
         :param path: The path to check.
         """
         logger.debug(f"Asserting directory exists: {path}")
-        if self._dry_run:
+        if is_dry_run:
             logger.debug(f"Dry run mode.")
             return
 
@@ -218,7 +228,7 @@ class FileSystemController:
         :param path: The path to check.
         """
         logger.debug(f"Asserting symlink: {path}")
-        if self._dry_run:
+        if is_dry_run:
             logger.debug(f"Dry run mode.")
             return
 
@@ -231,7 +241,7 @@ class FileSystemController:
         :param path: The path to check.
         """
         logger.debug(f"Asserting path does not exist: {path}")
-        if self._dry_run:
+        if is_dry_run:
             logger.debug(f"Dry run mode.")
             return
 
@@ -244,7 +254,7 @@ class FileSystemController:
         :param path: The path to remove.
         """
         logger.info(f"Removing file: {path}")
-        if self._dry_run:
+        if is_dry_run:
             logger.debug(f"Dry run mode.")
             return
 
@@ -262,7 +272,7 @@ class FileSystemController:
         :param link_name: The name of the symbolic link.
         """
         logger.info(f"Creating symbolic link: {link_name} -> {target}")
-        if self._dry_run:
+        if is_dry_run:
             logger.debug(f"Dry run mode.")
             return
 
@@ -280,7 +290,7 @@ class FileSystemController:
         :return: True if the path is a symbolic link, False otherwise.
         """
         logger.debug(f"Checking if path is a symbolic link: {path}")
-        if self._dry_run:
+        if is_dry_run:
             logger.debug(f"Dry run mode.")
             return False
 
@@ -295,7 +305,7 @@ class FileSystemController:
         :param destination: The destination file.
         """
         logger.info(f"Copying file: {source} -> {destination}")
-        if self._dry_run:
+        if is_dry_run:
             logger.debug(f"Dry run mode.")
             return
 
@@ -332,10 +342,80 @@ class FileSystemController:
         return os.path.join(*paths)
 
 
+class PromptManager:
+    """
+    Class to manage prompts.
+    """
+
+    def __init__(self):
+        pass
+
+    def prompt(self, message: str, default: Optional[str] = None) -> str:
+        """
+        Prompt the user for input.
+        :param message: The message to display.
+        :param default: The default value.
+        :return: The user's input.
+        """
+        questions = [
+            inquirer.Text("value", message=message, default=default),
+        ]
+        answers = inquirer.prompt(questions)
+        return answers["value"]
+
+    def prompt_yes_no(self, message: str, default: Optional[bool] = None) -> bool:
+        """
+        Prompt the user for a yes/no answer.
+        :param message: The message to display.
+        :param default: The default value.
+        :return: True if yes, False if no.
+        """
+        questions = [
+            inquirer.Confirm("value", message=message, default=default),
+        ]
+        answers = inquirer.prompt(questions)
+        return answers["value"]
+
+    def prompt_password(self, message: str) -> str:
+        """
+        Prompt the user for a password.
+        :param message: The message to display.
+        :return: The user's password.
+        """
+        questions = [
+            inquirer.Password("value", message=message),
+        ]
+        answers = inquirer.prompt(questions)
+        return answers["value"]
+
+    def prompt_select(
+        self, message: str, choices: list[str], default: Optional[str] = None
+    ) -> str:
+        """
+        Prompt the user to select from a list of choices.
+        :param message: The message to display.
+        :param choices: The list of choices.
+        :param default: The default value.
+        :return: The user's selection.
+        """
+        questions = [
+            inquirer.List("value", message=message, choices=choices, default=default),
+        ]
+        answers = inquirer.prompt(questions)
+        return answers["value"]
+
+
 class ConfigurationObject(ABC):
     """
     Abstract class for configuration objects.
     """
+
+    def __init__(self):
+        """
+        Initialize the configuration object.
+        """
+        if is_dry_run:
+            self.__should_be_configured: bool = False
 
     @property
     @abstractmethod
@@ -363,38 +443,101 @@ class ConfigurationObject(ABC):
         """
         pass
 
-    def configure(self) -> None:
+    def configure(self, override: bool = False) -> None:
         """
         Configure the configuration object.
         """
+        is_override = False
         if self.check_if_configured():
-            logger.warning(f"{self.name} is already configured, nothing to configure.")
-            return
+            if not override:
+                logger.warning(
+                    f"{self.name} is already configured, nothing to configure."
+                )
+                return
+            logger.info(f"{self.name} is already configured, overriding configuration.")
+            is_override = True
+
+        for dependency in self.dependencies:
+            if not dependency.check_if_configured():
+                logger.warning(
+                    f"{self.name} dependency {dependency.name} is not configured."
+                )
+                raise Exception(
+                    f"{self.name} dependency {dependency.name} is not configured."
+                )
 
         logger.info(f"Configuring {self.name}.")
         try:
-            self._configure()
+            self._configure(is_override)
             logger.debug(f"{self.name} configured successfully.")
         except Exception as e:
             logger.error(f"{self.name} configuration failed: {e}")
             raise
 
+        if is_dry_run:
+            self.__should_be_configured = True
+
     @abstractmethod
-    def _configure(self) -> None:
+    def _configure(self, is_override: bool) -> None:
         """
         Configure the configuration object.
+        :param is_override: Whether to override the configuration.
         """
         pass
 
-    @abstractmethod
     def validate(self) -> None:
+        """
+        Validate the configuration object.
+        """
+        logger.info(f"Validating {self.name}.")
+        if is_dry_run and self.__should_be_configured:
+            logger.debug(f"Dry run mode.")
+            return
+        try:
+            self._validate()
+            logger.debug(f"{self.name} validated successfully.")
+        except Exception as e:
+            logger.error(f"{self.name} validation failed: {e}")
+            raise
+
+    @abstractmethod
+    def _validate(self) -> None:
         """
         Validate the configuration object.
         """
         pass
 
-    @abstractmethod
     def check_if_configured(self) -> bool:
+        """
+        Check if the configuration object is configured.
+        :return: True if configured, False otherwise.
+        """
+        if is_dry_run and self.__should_be_configured:
+            logger.debug(f"{self.name} is configured in dry run mode.")
+            return True
+
+        if not self._check_if_configured():
+            logger.debug(f"{self.name} is not configured.")
+            return False
+
+        logger.debug(f"{self.name} is configured, checking dependencies.")
+        missing_dependencies = []
+        for dependency in self.dependencies:
+            if not dependency.check_if_configured():
+                logger.debug(
+                    f"{self.name} dependency {dependency.name} is not configured."
+                )
+                missing_dependencies.append(dependency.name)
+
+        is_configured = len(missing_dependencies) == 0
+
+        if is_dry_run and is_configured:
+            self.__should_be_configured = True
+
+        return is_configured
+
+    @abstractmethod
+    def _check_if_configured(self) -> bool:
         """
         Check if the configuration object is configured.
         :return: True if configured, False otherwise.
@@ -417,6 +560,9 @@ class ConfigurationObject(ABC):
             logger.error(f"{self.name} unconfiguration failed: {e}")
             raise
 
+        if is_dry_run:
+            self.__should_be_configured = False
+
         logger.info(f"{self.name} state: {self.get_state()}")
 
     @abstractmethod
@@ -428,18 +574,105 @@ class ConfigurationObject(ABC):
 
 
 # *** Concrete Configuration Objects *******************************************
+class UserGitConfiguration(ConfigurationObject):
+    def __init__(self, prompt_manager: PromptManager, commands_runner: CommandsRunner):
+        """
+        Initialize the UserGitConfiguration object.
+        :param prompt_manager: The prompt manager.
+        :param commands_runner: The commands runner.
+        """
+        super().__init__()
+        self._prompt_manager: PromptManager = prompt_manager
+        self._commands_runner: CommandsRunner = commands_runner
+
+    @property
+    @override
+    def dependencies(self) -> list[ConfigurationObject]:
+        return []
+
+    @property
+    @override
+    def name(self) -> str:
+        return "User Git Configuration"
+
+    def get_username(self) -> str:
+        git_config_user_name = self._commands_runner.run_command(
+            "git", args=["config", "--global", "user.name"], ignore_dry_run=True
+        )
+        return (
+            git_config_user_name[self._commands_runner.RETURN_INDEX_STDOUT].strip()
+            if git_config_user_name
+            else ""
+        )
+
+    def get_email(self) -> str:
+        git_config_user_email = self._commands_runner.run_command(
+            "git", args=["config", "--global", "user.email"], ignore_dry_run=True
+        )
+        return (
+            git_config_user_email[self._commands_runner.RETURN_INDEX_STDOUT].strip()
+            if git_config_user_email
+            else ""
+        )
+
+    @override
+    def get_state(self) -> str:
+        username = self.get_username()
+        email = self.get_email()
+        if username and email:
+            return f'Configured with username: "{username}" and email: "{email}"'
+        return "Not Configured"
+
+    @override
+    def _configure(self, is_override: bool) -> None:
+        username = self._prompt_manager.prompt(
+            "Enter your git username", default=self.get_username()
+        )
+        assert username, "Git username cannot be empty."
+
+        email = self._prompt_manager.prompt(
+            "Enter your git email", default=self.get_email()
+        )
+        assert email, "Git email cannot be empty."
+
+        logger.info(f'Configuring git with username: "{username}" and email: "{email}"')
+        self._commands_runner.run_command(
+            "git", args=["config", "--global", "user.name", username]
+        )
+        self._commands_runner.run_command(
+            "git", args=["config", "--global", "user.email", email]
+        )
+
+    @override
+    def _validate(self) -> None:
+        assert self.get_username(), "Git username is not configured."
+        assert self.get_email(), "Git email is not configured."
+
+    @override
+    def _check_if_configured(self) -> bool:
+        username = self.get_username()
+        email = self.get_email()
+        return username and email
+
+    @override
+    def _unconfigure(self) -> None:
+        logger.warning("Not implemented yet.")
+
+
 class UserDirectoryConfiguration(ConfigurationObject):
     def __init__(
         self,
         commands_runner: CommandsRunner,
         file_system_controller: FileSystemController,
         configuration_path: str,
+        git_configuration: UserGitConfiguration,
     ):
         """
         Initialize the UserDirectoryConfiguration object.
         :param commands_runner: The commands runner.
         :param file_system_controller: The file system controller.
         :param configuration_path: The path to the user directory.
+        :param git_configuration: The git configuration object.
         """
         super().__init__()
         self._commands_runner: CommandsRunner = commands_runner
@@ -447,11 +680,12 @@ class UserDirectoryConfiguration(ConfigurationObject):
         self._user_directory: str = file_system_controller.expanduser(
             configuration_path
         )
+        self._git_configuration: UserGitConfiguration = git_configuration
 
     @property
     @override
     def dependencies(self) -> list[ConfigurationObject]:
-        return []
+        return [self._git_configuration]
 
     @property
     @override
@@ -478,12 +712,15 @@ class UserDirectoryConfiguration(ConfigurationObject):
             return f"Not Configured correctly: {str(e)}"
 
     @override
-    def _configure(self) -> None:
+    def _configure(self, is_override: bool) -> None:
+        assert (
+            not is_override
+        ), "Overriding user directory configuration is not allowed."
         self._file_system_controller.create_directory(self.user_directory)
         self._commands_runner.run_command("git init", [self.user_directory])
 
     @override
-    def validate(self) -> None:
+    def _validate(self) -> None:
         self._file_system_controller.assert_directory_exists(
             self.user_directory,
             f"User directory {self.user_directory} does not exist.",
@@ -494,7 +731,7 @@ class UserDirectoryConfiguration(ConfigurationObject):
         )
 
     @override
-    def check_if_configured(self) -> bool:
+    def _check_if_configured(self) -> bool:
         if not self._file_system_controller.exists(self.user_directory):
             return False
         if not self._file_system_controller.is_directory(self.user_directory):
@@ -508,10 +745,14 @@ class UserDirectoryConfiguration(ConfigurationObject):
 
 
 # *** Functions ****************************************************************
-def setup_logging(level: int, console_level: Optional[int] = None, file_path: Optional[str] = None) -> None:
+def setup_logging(
+    level: int, console_level: Optional[int] = None, file_path: Optional[str] = None
+) -> None:
     logger.setLevel(level)
     logger.addFilter(ContextFilter())
-    format = "[%(asctime)s][%(levelname)s][%(context)s] %(filename)s:%(lineno)d: %(message)s"
+    format = (
+        "[%(asctime)s][%(levelname)s][%(context)s] %(filename)s:%(lineno)d: %(message)s"
+    )
     formatter = logging.Formatter(format)
     color_formatter = ColoredFormatter(
         "%(log_color)s" + format,
@@ -545,16 +786,29 @@ def main():
     logger.info("Starting Raven DE installer.")
     logger.info("Running in dry run mode.")
 
-    commands_runner = CommandsRunner(dry_run=True)
-    file_system_controller = FileSystemController(dry_run=True)
+    global is_dry_run
+    is_dry_run = True
+
+    prompt_manager = PromptManager()
+    commands_runner = CommandsRunner()
+    hello = commands_runner.run_command(
+        "echo", args=["Hello, World!"], ignore_dry_run=True
+    )
+    logger.info(hello)
+    file_system_controller = FileSystemController()
     user_directory = os.path.join(
         file_system_controller.get_home_directory(), ".raven-de"
     )
+    git_configuration = UserGitConfiguration(prompt_manager, commands_runner)
     user_directory_config = UserDirectoryConfiguration(
         commands_runner=commands_runner,
         file_system_controller=file_system_controller,
         configuration_path=user_directory,
+        git_configuration=git_configuration,
     )
+    git_configuration.configure(override=True)
+    git_configuration.validate()
+    logger.info(f"Git configuration state: {git_configuration.get_state()}")
     user_directory_config.configure()
     user_directory_config.validate()
     logger.info(f"User configuration state: {user_directory_config.get_state()}")
