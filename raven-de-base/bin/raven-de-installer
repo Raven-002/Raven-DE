@@ -14,6 +14,7 @@ import inspect
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Optional, override
+from colorlog import ColoredFormatter
 
 
 # *** Globals ******************************************************************
@@ -75,11 +76,11 @@ class CommandsRunner:
 
         logger.info(f"Running command: {command}")
         if self._dry_run:
-            logger.info(f"Dry run mode.")
+            logger.debug(f"Dry run mode.")
             return None
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
         if result.stdout:
-            logger.info(f"Command output: {result.stdout.strip()}")
+            logger.debug(f"Command output: {result.stdout.strip()}")
         if result.stderr:
             logger.warning(f"Command error: {result.stderr.strip()}")
         if not allow_error and result.returncode != 0:
@@ -106,12 +107,12 @@ class FileSystemController:
         """
         logger.info(f"Creating directory: {path}")
         if self._dry_run:
-            logger.info(f"Dry run mode.")
+            logger.debug(f"Dry run mode.")
             return
 
         try:
             os.makedirs(path, exist_ok=True)
-            logger.info(f"Directory created: {path}")
+            logger.debug(f"Directory created: {path}")
         except Exception as e:
             logger.error(f"Failed to create directory: {e}")
             raise
@@ -123,12 +124,12 @@ class FileSystemController:
         """
         logger.info(f"Removing directory: {path}")
         if self._dry_run:
-            logger.info(f"Dry run mode.")
+            logger.debug(f"Dry run mode.")
             return
 
         try:
             os.rmdir(path)
-            logger.info(f"Directory removed: {path}")
+            logger.debug(f"Directory removed: {path}")
         except Exception as e:
             logger.error(f"Failed to remove directory: {e}")
             raise
@@ -139,9 +140,9 @@ class FileSystemController:
         :param path: The path to check.
         :return: True if the file exists, False otherwise.
         """
-        logger.info(f"Checking if file exists: {path}")
+        logger.debug(f"Checking if file exists: {path}")
         exists = os.path.exists(path)
-        logger.info(f"File exists: {exists}")
+        logger.debug(f"File exists: {exists}")
         return exists
 
     def is_directory(self, path: str) -> bool:
@@ -150,12 +151,12 @@ class FileSystemController:
         :param path: The path to check.
         :return: True if the path is a directory, False otherwise.
         """
-        logger.info(f"Checking if path is a directory: {path}")
+        logger.debug(f"Checking if path is a directory: {path}")
         is_dir = os.path.isdir(path)
         if is_dir:
-            logger.info(f"Path is a directory: {path}")
+            logger.debug(f"Path is a directory: {path}")
         else:
-            logger.info(f"Path is not a directory: {path}")
+            logger.debug(f"Path is not a directory: {path}")
         return is_dir
 
     def is_file(self, path: str) -> bool:
@@ -164,9 +165,9 @@ class FileSystemController:
         :param path: The path to check.
         :return: True if the path is a file, False otherwise.
         """
-        logger.info(f"Checking if path is a file: {path}")
+        logger.debug(f"Checking if path is a file: {path}")
         is_file = os.path.isfile(path)
-        logger.info(f"Path is a file: {is_file}")
+        logger.debug(f"Path is a file: {is_file}")
         return is_file
 
     def assert_exists(self, path: str, message: Optional[str] = None) -> None:
@@ -174,9 +175,9 @@ class FileSystemController:
         Assert that a path exists.
         :param path: The path to check.
         """
-        logger.info(f"Asserting path exists: {path}")
+        logger.debug(f"Asserting path exists: {path}")
         if self._dry_run:
-            logger.info(f"Dry run mode.")
+            logger.debug(f"Dry run mode.")
             return
 
         if not self.exists(path):
@@ -188,9 +189,9 @@ class FileSystemController:
         Assert that a file exists.
         :param path: The path to check.
         """
-        logger.info(f"Asserting file exists: {path}")
+        logger.debug(f"Asserting file exists: {path}")
         if self._dry_run:
-            logger.info(f"Dry run mode.")
+            logger.debug(f"Dry run mode.")
             return
 
         if not self.is_file(path):
@@ -202,9 +203,9 @@ class FileSystemController:
         Assert that a directory exists.
         :param path: The path to check.
         """
-        logger.info(f"Asserting directory exists: {path}")
+        logger.debug(f"Asserting directory exists: {path}")
         if self._dry_run:
-            logger.info(f"Dry run mode.")
+            logger.debug(f"Dry run mode.")
             return
 
         if not self.is_directory(path):
@@ -216,9 +217,9 @@ class FileSystemController:
         Assert that a path is a symbolic link.
         :param path: The path to check.
         """
-        logger.info(f"Asserting symlink: {path}")
+        logger.debug(f"Asserting symlink: {path}")
         if self._dry_run:
-            logger.info(f"Dry run mode.")
+            logger.debug(f"Dry run mode.")
             return
 
         if not self.is_symlink(path):
@@ -229,9 +230,9 @@ class FileSystemController:
         Assert that a path does not exist.
         :param path: The path to check.
         """
-        logger.info(f"Asserting path does not exist: {path}")
+        logger.debug(f"Asserting path does not exist: {path}")
         if self._dry_run:
-            logger.info(f"Dry run mode.")
+            logger.debug(f"Dry run mode.")
             return
 
         if self.exists(path):
@@ -244,12 +245,12 @@ class FileSystemController:
         """
         logger.info(f"Removing file: {path}")
         if self._dry_run:
-            logger.info(f"Dry run mode.")
+            logger.debug(f"Dry run mode.")
             return
 
         try:
             os.remove(path)
-            logger.info(f"File removed: {path}")
+            logger.debug(f"File removed: {path}")
         except Exception as e:
             logger.error(f"Failed to remove file: {e}")
             raise
@@ -262,12 +263,12 @@ class FileSystemController:
         """
         logger.info(f"Creating symbolic link: {link_name} -> {target}")
         if self._dry_run:
-            logger.info(f"Dry run mode.")
+            logger.debug(f"Dry run mode.")
             return
 
         try:
             os.symlink(target, link_name)
-            logger.info(f"Symbolic link created: {link_name} -> {target}")
+            logger.debug(f"Symbolic link created: {link_name} -> {target}")
         except Exception as e:
             logger.error(f"Failed to create symbolic link: {e}")
             raise
@@ -278,13 +279,13 @@ class FileSystemController:
         :param path: The path to check.
         :return: True if the path is a symbolic link, False otherwise.
         """
-        logger.info(f"Checking if path is a symbolic link: {path}")
+        logger.debug(f"Checking if path is a symbolic link: {path}")
         if self._dry_run:
-            logger.info(f"Dry run mode.")
+            logger.debug(f"Dry run mode.")
             return False
 
         is_link = os.path.islink(path)
-        logger.info(f"Path is a symbolic link: {is_link}")
+        logger.debug(f"Path is a symbolic link: {is_link}")
         return is_link
 
     def copy_file(self, source: str, destination: str) -> None:
@@ -295,14 +296,14 @@ class FileSystemController:
         """
         logger.info(f"Copying file: {source} -> {destination}")
         if self._dry_run:
-            logger.info(f"Dry run mode.")
+            logger.debug(f"Dry run mode.")
             return
 
         try:
             with open(source, "rb") as src_file:
                 with open(destination, "wb") as dest_file:
                     dest_file.write(src_file.read())
-            logger.info(f"File copied: {source} -> {destination}")
+            logger.debug(f"File copied: {source} -> {destination}")
         except Exception as e:
             logger.error(f"Failed to copy file: {e}")
             raise
@@ -367,26 +368,16 @@ class ConfigurationObject(ABC):
         Configure the configuration object.
         """
         if self.check_if_configured():
-            logger.info(f"Configuration object is already configured.")
+            logger.warning(f"{self.name} is already configured, nothing to configure.")
             return
 
-        logger.info(f"Configuring configuration object.")
+        logger.info(f"Configuring {self.name}.")
         try:
             self._configure()
-            logger.info(f"Configuration object configured successfully.")
+            logger.debug(f"{self.name} configured successfully.")
         except Exception as e:
-            logger.error(f"Configuration object configuration failed: {e}")
+            logger.error(f"{self.name} configuration failed: {e}")
             raise
-
-        logger.info(f"Validating configuration object.")
-        try:
-            self.validate()
-            logger.info(f"Configuration object validation successful.")
-        except Exception as e:
-            logger.error(f"Configuration object validation failed: {e}")
-            raise
-
-        logger.info(f"Configuration object state: {self.get_state()}")
 
     @abstractmethod
     def _configure(self) -> None:
@@ -415,18 +406,18 @@ class ConfigurationObject(ABC):
         Unconfigure the configuration object.
         """
         if not self.check_if_configured():
-            logger.info(f"Configuration object is not configured.")
+            logger.warning(f"{self.name} is not configured, nothing to unconfigure.")
             return
 
         logger.info(f"Unconfiguring configuration object.")
         try:
             self._unconfigure()
-            logger.info(f"Configuration object unconfigured successfully.")
+            logger.info(f"{self.name} unconfigured successfully.")
         except Exception as e:
-            logger.error(f"Configuration object unconfiguration failed: {e}")
+            logger.error(f"{self.name} unconfiguration failed: {e}")
             raise
 
-        logger.info(f"Configuration object state: {self.get_state()}")
+        logger.info(f"{self.name} state: {self.get_state()}")
 
     @abstractmethod
     def _unconfigure(self) -> None:
@@ -517,15 +508,31 @@ class UserDirectoryConfiguration(ConfigurationObject):
 
 
 # *** Functions ****************************************************************
-def setup_logging():
-    logger.setLevel(logging.INFO)
+def setup_logging(level: int, console_level: Optional[int] = None, file_path: Optional[str] = None) -> None:
+    logger.setLevel(level)
     logger.addFilter(ContextFilter())
-    formatter = logging.Formatter(
-        "[%(asctime)s][%(levelname)s][%(context)s] %(filename)s:%(lineno)d: %(message)s"
+    format = "[%(asctime)s][%(levelname)s][%(context)s] %(filename)s:%(lineno)d: %(message)s"
+    formatter = logging.Formatter(format)
+    color_formatter = ColoredFormatter(
+        "%(log_color)s" + format,
+        reset=True,
+        log_colors={
+            "DEBUG": "cyan",
+            "INFO": "green",
+            "WARNING": "yellow",
+            "ERROR": "red",
+            "CRITICAL": "red,bg_white",
+        },
     )
     console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(formatter)
+    console_handler.setFormatter(color_formatter)
+    console_handler.setLevel(console_level or level)
     logger.addHandler(console_handler)
+    if file_path:
+        file_handler = logging.FileHandler(file_path)
+        file_handler.setFormatter(formatter)
+        file_handler.setLevel(level)
+        logger.addHandler(file_handler)
 
 
 # *** Main *********************************************************************
@@ -533,7 +540,7 @@ def main():
     """
     Main function to run the Raven DE installer.
     """
-    setup_logging()
+    setup_logging(logging.DEBUG, logging.INFO)
     logger.info("Raven DE Installer")
     logger.info("Starting Raven DE installer.")
     logger.info("Running in dry run mode.")
@@ -550,10 +557,8 @@ def main():
     )
     user_directory_config.configure()
     user_directory_config.validate()
+    logger.info(f"User configuration state: {user_directory_config.get_state()}")
     user_directory_config.unconfigure()
-
-    print("This script is a placeholder for the Raven DE installation process.")
-    print("Please refer to the official documentation for installation instructions.")
 
 
 if __name__ == "__main__":
